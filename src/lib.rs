@@ -10,6 +10,7 @@ use forrustts::prelude::*;
 // layout than a simple position.
 // It is > 32 bits just to try
 // to annoy memory accesses.
+#[derive(Clone, Debug)]
 pub struct Mutation {
     position: Position,
     effect_sizes: Vec<f64>,
@@ -34,6 +35,7 @@ impl Mutation {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
 struct MutationRange {
     start: usize,
     stop: usize,
@@ -60,7 +62,7 @@ impl DiploidGenome {
 /// When will the borrow checker hate this?
 pub struct DiploidPopWithHaplotypes {
     haplotypes: Haplotypes,
-    individuals: Vec<Option<DiploidGenome>>,
+    individuals: Vec<DiploidGenome>,
     mutations: Vec<Mutation>,
     mutation_counts: Vec<u32>,
 }
@@ -68,10 +70,20 @@ pub struct DiploidPopWithHaplotypes {
 impl DiploidPopWithHaplotypes {
     pub fn new(size: u32) -> Option<Self> {
         if size > 0 {
-            let individuals = vec![None; size as usize];
+            let mut haplotypes = Haplotypes::default();
+
+            // FIXME: design smell -- if we are modifying
+            // the default then the default isn't the default.
+            haplotypes
+                .haplotypes
+                .push(MutationRange { start: 0, stop: 1 });
+
+            // Now, everyone starts with a single "empty"
+            // genome
+            let individuals = vec![DiploidGenome::new(0, 0); size as usize];
 
             Some(Self {
-                haplotypes: Haplotypes::default(),
+                haplotypes,
                 individuals,
                 mutations: vec![],
                 mutation_counts: vec![],
@@ -142,11 +154,11 @@ fn generate_mutations(
 }
 
 fn make_offspring_genome(
-    parent: usize,
-    mutations: Vec<usize>,
+    parent: DiploidGenome,
     parent_haplotypes: &Haplotypes,
+    mutations: Vec<usize>,
     offspring_haplotypes: &mut Haplotypes,
-) {
+) -> usize {
     todo!("not implemented")
 }
 
@@ -197,10 +209,10 @@ pub fn evolve_pop_with_haplotypes(
             // ignore recombination and Mendel for now
             // and only pass on the 1st genoe from
             // a parent + mutations
-            make_offspring_genome(
-                parent1,
-                mutations,
+            let key = make_offspring_genome(
+                pop.individuals[parent1],
                 &pop.haplotypes,
+                mutations,
                 &mut offspring_haplotypes,
             );
         }

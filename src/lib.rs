@@ -141,6 +141,15 @@ fn generate_mutations(
     rv
 }
 
+fn make_offspring_genome(
+    parent: usize,
+    mutations: Vec<usize>,
+    parent_haplotypes: &Haplotypes,
+    offspring_haplotypes: &mut Haplotypes,
+) {
+    todo!("not implemented")
+}
+
 impl SimParams {
     pub fn validate(self) -> Option<Self> {
         if !self.mutation_rate.is_finite() || self.mutation_rate < 0.0 {
@@ -150,6 +159,8 @@ impl SimParams {
     }
 }
 
+// A proper implementation
+// would be generic over "generating mutations"
 pub fn evolve_pop_with_haplotypes(
     params: SimParams,
     genetic_map: GeneticMap,
@@ -159,8 +170,13 @@ pub fn evolve_pop_with_haplotypes(
 
     let mut rng = rand::rngs::StdRng::seed_from_u64(params.seed);
     let parent_picker = rand::distributions::Uniform::<usize>::new(0, params.size as usize);
-    let nmuts = rand_distr::Poisson::new(params.mutation_rate).ok();
+    let num_mutations = rand_distr::Poisson::<f64>::new(params.mutation_rate).ok()?;
+    let position_generator = rand::distributions::Uniform::<Position>::new(
+        Position::new_valid(0),
+        Position::new_valid(1000000),
+    );
 
+    let mut offspring_haplotypes = Haplotypes::default();
     for generation in 0..params.num_generations {
         let mut queue = pop.mutation_recycling();
         for birth in 0..params.size {
@@ -168,10 +184,40 @@ pub fn evolve_pop_with_haplotypes(
             let parent1 = rng.sample(parent_picker);
             let parent2 = rng.sample(parent_picker);
 
-            // recombination and transmission from
-            // each parent along w/mutation
+            // Mutations for offspring genome 1
+            let mutations = generate_mutations(
+                generation,
+                num_mutations,
+                position_generator,
+                &mut queue,
+                &mut pop.mutations,
+                &mut rng,
+            );
+
+            // ignore recombination and Mendel for now
+            // and only pass on the 1st genoe from
+            // a parent + mutations
+            make_offspring_genome(
+                parent1,
+                mutations,
+                &pop.haplotypes,
+                &mut offspring_haplotypes,
+            );
         }
     }
 
     Some(pop)
+}
+
+#[test]
+fn run_sim() {
+    let params = SimParams {
+        seed: 666,
+        size: 1000,
+        num_generations: 1000,
+        mutation_rate: 1e-1,
+    };
+    let builder = forrustts::genetics::GeneticMapBuilder::default();
+    let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
+    let _ = evolve_pop_with_haplotypes(params, genetic_map).unwrap();
 }

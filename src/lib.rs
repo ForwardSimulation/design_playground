@@ -3,7 +3,7 @@ use std::borrow::BorrowMut;
 use rand::prelude::Rng;
 use rand::SeedableRng;
 
-use forrustts::genetics::GeneticMap;
+use forrustts::genetics::{Breakpoint, GeneticMap};
 use forrustts::prelude::*;
 
 // We need a type with a more complex
@@ -156,9 +156,14 @@ fn generate_mutations(
 fn make_offspring_genome(
     parent: DiploidGenome,
     parent_haplotypes: &Haplotypes,
-    mutations: Vec<usize>,
+    mutations: &Vec<Mutation>,
+    new_mutations: Vec<usize>,
+    breakpoints: &[Breakpoint],
     offspring_haplotypes: &mut Haplotypes,
 ) -> usize {
+    if new_mutations.is_empty() {
+        todo!("then crossover or faithfully propagate parent")
+    }
     todo!("not implemented")
 }
 
@@ -212,7 +217,9 @@ pub fn evolve_pop_with_haplotypes(
             let key = make_offspring_genome(
                 pop.individuals[parent1],
                 &pop.haplotypes,
+                &pop.mutations,
                 mutations,
+                &[], // no recombination for now...
                 &mut offspring_haplotypes,
             );
         }

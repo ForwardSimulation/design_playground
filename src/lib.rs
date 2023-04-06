@@ -207,7 +207,7 @@ pub fn evolve_pop_with_haplotypes(
             );
 
             // ignore recombination and Mendel for now
-            // and only pass on the 1st genoe from
+            // and only pass on the 1st genome from
             // a parent + mutations
             let key = make_offspring_genome(
                 pop.individuals[parent1],

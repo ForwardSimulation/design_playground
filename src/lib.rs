@@ -8,15 +8,15 @@ use forrustts::prelude::*;
 pub struct Mutation {
     position: Position,
     effect_sizes: Vec<f64>,
-    scratch: u32,
+    origin_time: Time,
 }
 
 impl Mutation {
-    pub fn new(position: Position, effect_sizes: Vec<f64>) -> Self {
+    pub fn new(position: Position, effect_sizes: Vec<f64>, origin_time: Time) -> Self {
         Self {
             position,
             effect_sizes,
-            scratch: 0,
+            origin_time,
         }
     }
 

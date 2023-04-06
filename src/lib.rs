@@ -76,7 +76,7 @@ impl DiploidPopWithHaplotypes {
             // the default then the default isn't the default.
             haplotypes
                 .haplotypes
-                .push(MutationRange { start: 0, stop: 1 });
+                .push(MutationRange { start: 0, stop: 0 });
 
             // Now, everyone starts with a single "empty"
             // genome

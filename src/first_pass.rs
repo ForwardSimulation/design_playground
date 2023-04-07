@@ -328,3 +328,15 @@ mod tests {
             }
     }
 }
+
+#[cfg(test)]
+mod tests_to_delete {
+    #[test]
+    fn test_slice_behavior() {
+        let v = Vec::<i32>::new();
+        let s = &v[0..];
+        assert!(s.is_empty());
+        let ss = &s[0..];
+        assert!(ss.is_empty());
+    }
+}

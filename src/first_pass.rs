@@ -193,6 +193,9 @@ fn make_offspring_genome2(
         offspring_haplotypes.mutations.push(*m);
         i += n;
     }
+    parent_slice[i..]
+        .iter()
+        .for_each(|m| offspring_haplotypes.mutations.push(*m));
     let stop = offspring_haplotypes.mutations.len();
     if stop > start {
         rv = offspring_haplotypes.haplotypes.len();

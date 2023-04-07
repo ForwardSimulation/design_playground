@@ -170,7 +170,13 @@ fn generate_mutations(
     rv
 }
 
-fn make_offspring_genome2(
+// NOTE: much of the behavior
+// here should be associated fns
+// of various types and/or other
+// standalone fns.
+//
+// FIXME: code duplication...
+fn make_offspring_genome(
     parent: DiploidGenome,
     parent_haplotypes: &Haplotypes,
     mutations: &[Mutation],
@@ -210,88 +216,6 @@ fn make_offspring_genome2(
         &offspring_haplotypes.mutations[start..stop]
     );
     rv
-}
-
-// NOTE: much of the behavior
-// here should be associated fns
-// of various types and/or other
-// standalone fns.
-//
-// FIXME: code duplication...
-fn make_offspring_genome(
-    parent: DiploidGenome,
-    parent_haplotypes: &Haplotypes,
-    mutations: &[Mutation],
-    new_mutations: Vec<usize>,
-    breakpoints: &[Breakpoint],
-    offspring_haplotypes: &mut Haplotypes,
-) -> usize {
-    assert!(breakpoints.is_empty(), "not dealing with recombination yet");
-    let parent_range = parent_haplotypes.haplotypes[parent.first];
-    if new_mutations.is_empty() {
-        // TODO: "mendel" needs to happen here: 1/2 the time
-        // we should use parent.second
-        if parent_range.stop > parent_range.start {
-            let parent_slice = &parent_haplotypes.mutations[parent_range.start..parent_range.stop];
-            let start = offspring_haplotypes.mutations.len();
-            offspring_haplotypes
-                .mutations
-                .extend_from_slice(parent_slice);
-            let stop = offspring_haplotypes.mutations.len();
-            let rv = offspring_haplotypes.haplotypes.len();
-            offspring_haplotypes
-                .haplotypes
-                .push(MutationRange { start, stop });
-            return rv;
-        } else {
-            return 0;
-        }
-    }
-
-    if parent_range.stop > parent_range.start {
-        let parent_slice = &parent_haplotypes.mutations[parent_range.start..parent_range.stop];
-        let mut i = 0;
-        let start = offspring_haplotypes.mutations.len();
-        let nm = new_mutations.len();
-        for m in new_mutations.iter() {
-            let n = parent_slice[i..]
-                .iter()
-                .take_while(|mutation| mutations[**mutation].position() < mutations[*m].position())
-                .inspect(|x| offspring_haplotypes.mutations.push(**x))
-                .count();
-            offspring_haplotypes.mutations.push(*m);
-            i += n;
-        }
-        parent_slice[i..]
-            .iter()
-            .for_each(|m| offspring_haplotypes.mutations.push(*m));
-        let stop = offspring_haplotypes.mutations.len();
-        assert_eq!(
-            stop - start,
-            nm + parent_slice.len(),
-            "{parent_slice:?} + {new_mutations:?} = {:?}",
-            &offspring_haplotypes.mutations[start..stop]
-        );
-        let rv = offspring_haplotypes.haplotypes.len();
-        offspring_haplotypes
-            .haplotypes
-            .push(MutationRange { start, stop });
-        rv
-    } else {
-        if new_mutations.is_empty() {
-            return 0;
-        }
-        let start = offspring_haplotypes.mutations.len();
-        for m in new_mutations.into_iter() {
-            offspring_haplotypes.mutations.push(m);
-        }
-        let stop = offspring_haplotypes.mutations.len();
-        let rv = offspring_haplotypes.haplotypes.len();
-        offspring_haplotypes
-            .haplotypes
-            .push(MutationRange { start, stop });
-        rv
-    }
 }
 
 impl SimParams {
@@ -342,7 +266,7 @@ pub fn evolve_pop_with_haplotypes(
             // ignore recombination and Mendel for now
             // and only pass on the 1st genome from
             // a parent + mutations
-            let first = make_offspring_genome2(
+            let first = make_offspring_genome(
                 pop.individuals[parent1],
                 &pop.haplotypes,
                 &pop.mutations,
@@ -360,7 +284,7 @@ pub fn evolve_pop_with_haplotypes(
                 &mut rng,
             );
 
-            let second = make_offspring_genome2(
+            let second = make_offspring_genome(
                 pop.individuals[parent2],
                 &pop.haplotypes,
                 &pop.mutations,

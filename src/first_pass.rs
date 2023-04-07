@@ -176,7 +176,7 @@ fn generate_mutations(
 // standalone fns.
 //
 // FIXME: code duplication...
-fn make_offspring_genome(
+fn generate_offspring_genome(
     parent: DiploidGenome,
     parent_haplotypes: &Haplotypes,
     mutations: &[Mutation],
@@ -266,7 +266,7 @@ pub fn evolve_pop_with_haplotypes(
             // ignore recombination and Mendel for now
             // and only pass on the 1st genome from
             // a parent + mutations
-            let first = make_offspring_genome(
+            let first = generate_offspring_genome(
                 pop.individuals[parent1],
                 &pop.haplotypes,
                 &pop.mutations,
@@ -284,7 +284,7 @@ pub fn evolve_pop_with_haplotypes(
                 &mut rng,
             );
 
-            let second = make_offspring_genome(
+            let second = generate_offspring_genome(
                 pop.individuals[parent2],
                 &pop.haplotypes,
                 &pop.mutations,

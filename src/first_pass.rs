@@ -45,6 +45,34 @@ struct Haplotypes {
     mutations: Vec<usize>,
 }
 
+impl Haplotypes {
+    fn get_genome<'h>(&'h self, genome: usize) -> ParentalGenome<'h> {
+        let index_range = self.haplotypes[genome];
+        let mutations = &self.mutations[index_range.start..index_range.stop];
+        ParentalGenome {
+            mutations,
+            current_index: 0,
+        }
+    }
+}
+
+struct ParentalGenome<'a> {
+    mutations: &'a [usize],
+    current_index: usize,
+}
+
+// Implementation is specific to "diploid",
+// so not an associated fn of Haplotypes
+fn get_parental_genomes<'h>(
+    haplotypes: &'h Haplotypes,
+    parent: DiploidGenome,
+) -> (ParentalGenome<'h>, ParentalGenome<'h>) {
+    (
+        haplotypes.get_genome(parent.first),
+        haplotypes.get_genome(parent.second),
+    )
+}
+
 // FIXME: We are not using the type system
 // well here.
 // We need a way for a DiploidGenome
@@ -186,27 +214,23 @@ fn generate_offspring_genome(
     rng: &mut rand::rngs::StdRng,
 ) -> usize {
     let u01 = rand::distributions::Uniform::new(0., 1.);
-    let genome = if rng.sample(u01) < 0.5 {
-        parent.first
-    } else {
-        parent.second
-    };
-    let parent_range = parent_haplotypes.haplotypes[genome];
+    let (mut first_genome, mut second_genome) = get_parental_genomes(parent_haplotypes, parent);
+    if rng.sample(u01) < 0.5 {
+        std::mem::swap(&mut first_genome, &mut second_genome);
+    }
     let mut rv = 0;
-    let parent_slice = &parent_haplotypes.mutations[parent_range.start..parent_range.stop];
-    let mut i = 0;
     let start = offspring_haplotypes.mutations.len();
     let nm = new_mutations.len();
     for m in new_mutations.iter() {
-        let n = parent_slice[i..]
+        let n = first_genome.mutations[first_genome.current_index..]
             .iter()
             .take_while(|mutation| mutations[**mutation].position() < mutations[*m].position())
             .inspect(|x| offspring_haplotypes.mutations.push(**x))
             .count();
         offspring_haplotypes.mutations.push(*m);
-        i += n;
+        first_genome.current_index += n;
     }
-    parent_slice[i..]
+    first_genome.mutations[first_genome.current_index..]
         .iter()
         .for_each(|m| offspring_haplotypes.mutations.push(*m));
     let stop = offspring_haplotypes.mutations.len();
@@ -218,8 +242,9 @@ fn generate_offspring_genome(
     }
     assert_eq!(
         stop - start,
-        nm + parent_slice.len(),
-        "{parent_slice:?} + {new_mutations:?} = {:?}",
+        nm + first_genome.mutations.len(),
+        "{:?} + {new_mutations:?} = {:?}",
+        first_genome.mutations,
         &offspring_haplotypes.mutations[start..stop]
     );
     rv

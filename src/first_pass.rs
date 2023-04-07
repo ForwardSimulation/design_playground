@@ -44,7 +44,7 @@ struct Haplotypes {
     mutations: Vec<usize>,
 }
 
-// FIXME: We are not using the type system 
+// FIXME: We are not using the type system
 // well here.
 // We need a way for a DiploidGenome
 // to indicate that one of its elements
@@ -52,8 +52,11 @@ struct Haplotypes {
 // seems the best here, but costs 2x the storage.
 impl Default for Haplotypes {
     fn default() -> Self {
-        let haplotypes = vec![MutationRange{start: 0, stop: 0}];
-        Self{haplotypes, mutations: vec![]}
+        let haplotypes = vec![MutationRange { start: 0, stop: 0 }];
+        Self {
+            haplotypes,
+            mutations: vec![],
+        }
     }
 }
 
@@ -157,6 +160,10 @@ fn generate_mutations(
     rv
 }
 
+// NOTE: much of the behavior
+// here should be associated fns
+// of various types and/or other
+// standalone fns.
 fn make_offspring_genome(
     parent: DiploidGenome,
     parent_haplotypes: &Haplotypes,
@@ -166,10 +173,10 @@ fn make_offspring_genome(
     offspring_haplotypes: &mut Haplotypes,
 ) -> usize {
     assert!(breakpoints.is_empty(), "not dealing with recombination yet");
+    let parent_range = parent_haplotypes.haplotypes[parent.first];
     if new_mutations.is_empty() {
         // TODO: "mendel" needs to happen here: 1/2 the time
         // we should use parent.second
-        let parent_range = parent_haplotypes.haplotypes[parent.first];
         if parent_range.stop > parent_range.start {
             let parent_slice = &parent_haplotypes.mutations[parent_range.start..parent_range.stop];
             let start = offspring_haplotypes.mutations.len();
@@ -186,7 +193,13 @@ fn make_offspring_genome(
             return 0;
         }
     }
-    todo!("not implemented")
+
+    let mut i = 0;
+    if parent_range.stop > parent_range.start {
+        unimplemented!("co-process new mutations and parental mutations");
+    } else {
+        unimplemented!("if there are new mutations, create a new gamete, else return empty gamete");
+    }
 }
 
 impl SimParams {

@@ -339,4 +339,14 @@ mod tests_to_delete {
         let ss = &s[0..];
         assert!(ss.is_empty());
     }
+
+    #[test]
+    fn test_swap_slices() {
+        let v = vec![1, 2, 3, 4];
+        let mut s0 = &v[0..2];
+        let mut s1 = &v[2..];
+        std::mem::swap(&mut s0, &mut s1);
+        assert_eq!(s0, &[3, 4]);
+        assert_eq!(s1, &[1, 2]);
+    }
 }

@@ -84,7 +84,7 @@ pub struct DiploidPopWithHaplotypes {
 impl DiploidPopWithHaplotypes {
     pub fn new(size: u32) -> Option<Self> {
         if size > 0 {
-            let mut haplotypes = Haplotypes::default();
+            let haplotypes = Haplotypes::default();
 
             // Now, everyone starts with a single "empty"
             // genome

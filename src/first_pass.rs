@@ -46,7 +46,7 @@ struct Haplotypes {
 }
 
 impl Haplotypes {
-    fn get_genome<'h>(&'h self, genome: usize) -> ParentalGenome<'h> {
+    fn get_genome(&self, genome: usize) -> ParentalGenome {
         let index_range = self.haplotypes[genome];
         let mutations = &self.mutations[index_range.start..index_range.stop];
         ParentalGenome {

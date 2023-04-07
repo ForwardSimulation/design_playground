@@ -39,10 +39,22 @@ struct MutationRange {
     stop: usize,
 }
 
-#[derive(Default)]
 struct Haplotypes {
     haplotypes: Vec<MutationRange>,
     mutations: Vec<usize>,
+}
+
+// FIXME: We are not using the type system 
+// well here.
+// We need a way for a DiploidGenome
+// to indicate that one of its elements
+// is mutation-free.  Option<usize>
+// seems the best here, but costs 2x the storage.
+impl Default for Haplotypes {
+    fn default() -> Self {
+        let haplotypes = vec![MutationRange{start: 0, stop: 0}];
+        Self{haplotypes, mutations: vec![]}
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -69,12 +81,6 @@ impl DiploidPopWithHaplotypes {
     pub fn new(size: u32) -> Option<Self> {
         if size > 0 {
             let mut haplotypes = Haplotypes::default();
-
-            // FIXME: design smell -- if we are modifying
-            // the default then the default isn't the default.
-            haplotypes
-                .haplotypes
-                .push(MutationRange { start: 0, stop: 0 });
 
             // Now, everyone starts with a single "empty"
             // genome
@@ -159,8 +165,26 @@ fn make_offspring_genome(
     breakpoints: &[Breakpoint],
     offspring_haplotypes: &mut Haplotypes,
 ) -> usize {
+    assert!(breakpoints.is_empty(), "not dealing with recombination yet");
     if new_mutations.is_empty() {
-        todo!("then crossover or faithfully propagate parent")
+        // TODO: "mendel" needs to happen here: 1/2 the time
+        // we should use parent.second
+        let parent_range = parent_haplotypes.haplotypes[parent.first];
+        if parent_range.stop > parent_range.start {
+            let parent_slice = &parent_haplotypes.mutations[parent_range.start..parent_range.stop];
+            let start = offspring_haplotypes.mutations.len();
+            offspring_haplotypes
+                .mutations
+                .extend_from_slice(parent_slice);
+            let stop = offspring_haplotypes.mutations.len();
+            let rv = offspring_haplotypes.haplotypes.len();
+            offspring_haplotypes
+                .haplotypes
+                .push(MutationRange { start, stop });
+            return rv;
+        } else {
+            return 0;
+        }
     }
     todo!("not implemented")
 }
@@ -238,4 +262,3 @@ fn run_sim() {
     let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
     let _ = evolve_pop_with_haplotypes(params, genetic_map).unwrap();
 }
-

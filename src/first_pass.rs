@@ -165,6 +165,8 @@ fn generate_mutations(
 // here should be associated fns
 // of various types and/or other
 // standalone fns.
+//
+// FIXME: code duplication...
 fn make_offspring_genome(
     parent: DiploidGenome,
     parent_haplotypes: &Haplotypes,
@@ -195,9 +197,35 @@ fn make_offspring_genome(
         }
     }
 
-    let mut i = 0;
     if parent_range.stop > parent_range.start {
-        unimplemented!("co-process new mutations and parental mutations");
+        let parent_slice = &parent_haplotypes.mutations[parent_range.start..parent_range.stop];
+        let mut i = 0;
+        let start = offspring_haplotypes.mutations.len();
+        let nm = new_mutations.len();
+        for m in new_mutations.iter() {
+            let n = parent_slice[i..]
+                .iter()
+                .take_while(|mutation| mutations[**mutation].position() < mutations[*m].position())
+                .inspect(|x| offspring_haplotypes.mutations.push(**x))
+                .count();
+            offspring_haplotypes.mutations.push(*m);
+            i += n;
+        }
+        parent_slice[i..]
+            .iter()
+            .for_each(|m| offspring_haplotypes.mutations.push(*m));
+        let stop = offspring_haplotypes.mutations.len();
+        assert_eq!(
+            stop - start,
+            nm + parent_slice.len(),
+            "{parent_slice:?} + {new_mutations:?} = {:?}",
+            &offspring_haplotypes.mutations[start..stop]
+        );
+        let rv = offspring_haplotypes.haplotypes.len();
+        offspring_haplotypes
+            .haplotypes
+            .push(MutationRange { start, stop });
+        rv
     } else {
         if new_mutations.is_empty() {
             return 0;
@@ -293,7 +321,7 @@ pub fn evolve_pop_with_haplotypes(
         }
         pop.haplotypes = offspring_haplotypes;
         pop.individuals = offspring;
-        // println!("{:?}", pop.haplotypes);
+        println!("done with {generation}");
     }
 
     Some(pop)

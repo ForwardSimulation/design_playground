@@ -109,6 +109,15 @@ impl DiploidPopWithHaplotypes {
             .filter_map(|(index, value)| if value == &0 { Some(index) } else { None })
             .collect::<Vec<usize>>()
     }
+
+    pub fn count_mutations(&mut self) {
+        self.mutation_counts.fill(0);
+        self.mutation_counts.resize(self.mutations.len(), 0);
+        self.haplotypes
+            .mutations
+            .iter()
+            .for_each(|m| self.mutation_counts[*m] += 1);
+    }
 }
 
 pub struct SimParams {
@@ -321,7 +330,8 @@ pub fn evolve_pop_with_haplotypes(
         }
         pop.haplotypes = offspring_haplotypes;
         pop.individuals = offspring;
-        println!("done with {generation}");
+        pop.count_mutations();
+        //println!("done with {generation}, {}", pop.mutations.len());
     }
 
     Some(pop)

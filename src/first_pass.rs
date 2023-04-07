@@ -170,6 +170,45 @@ fn generate_mutations(
     rv
 }
 
+fn make_offspring_genome2(
+    parent: DiploidGenome,
+    parent_haplotypes: &Haplotypes,
+    mutations: &[Mutation],
+    new_mutations: Vec<usize>,
+    breakpoints: &[Breakpoint],
+    offspring_haplotypes: &mut Haplotypes,
+) -> usize {
+    let parent_range = parent_haplotypes.haplotypes[parent.first];
+    let mut rv = 0;
+    let parent_slice = &parent_haplotypes.mutations[parent_range.start..parent_range.stop];
+    let mut i = 0;
+    let start = offspring_haplotypes.mutations.len();
+    let nm = new_mutations.len();
+    for m in new_mutations.iter() {
+        let n = parent_slice[i..]
+            .iter()
+            .take_while(|mutation| mutations[**mutation].position() < mutations[*m].position())
+            .inspect(|x| offspring_haplotypes.mutations.push(**x))
+            .count();
+        offspring_haplotypes.mutations.push(*m);
+        i += n;
+    }
+    let stop = offspring_haplotypes.mutations.len();
+    if stop > start {
+        rv = offspring_haplotypes.haplotypes.len();
+        offspring_haplotypes
+            .haplotypes
+            .push(MutationRange { start, stop });
+    }
+    assert_eq!(
+        stop - start,
+        nm + parent_slice.len(),
+        "{parent_slice:?} + {new_mutations:?} = {:?}",
+        &offspring_haplotypes.mutations[start..stop]
+    );
+    rv
+}
+
 // NOTE: much of the behavior
 // here should be associated fns
 // of various types and/or other
@@ -179,7 +218,7 @@ fn generate_mutations(
 fn make_offspring_genome(
     parent: DiploidGenome,
     parent_haplotypes: &Haplotypes,
-    mutations: &Vec<Mutation>,
+    mutations: &[Mutation],
     new_mutations: Vec<usize>,
     breakpoints: &[Breakpoint],
     offspring_haplotypes: &mut Haplotypes,
@@ -300,7 +339,7 @@ pub fn evolve_pop_with_haplotypes(
             // ignore recombination and Mendel for now
             // and only pass on the 1st genome from
             // a parent + mutations
-            let first = make_offspring_genome(
+            let first = make_offspring_genome2(
                 pop.individuals[parent1],
                 &pop.haplotypes,
                 &pop.mutations,
@@ -318,7 +357,7 @@ pub fn evolve_pop_with_haplotypes(
                 &mut rng,
             );
 
-            let second = make_offspring_genome(
+            let second = make_offspring_genome2(
                 pop.individuals[parent2],
                 &pop.haplotypes,
                 &pop.mutations,

@@ -63,10 +63,10 @@ struct ParentalGenome<'a> {
 
 // Implementation is specific to "diploid",
 // so not an associated fn of Haplotypes
-fn get_parental_genomes<'h>(
-    haplotypes: &'h Haplotypes,
+fn get_parental_genomes(
+    haplotypes: &Haplotypes,
     parent: DiploidGenome,
-) -> (ParentalGenome<'h>, ParentalGenome<'h>) {
+) -> (ParentalGenome, ParentalGenome) {
     (
         haplotypes.get_genome(parent.first),
         haplotypes.get_genome(parent.second),

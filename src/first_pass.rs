@@ -337,16 +337,28 @@ pub fn evolve_pop_with_haplotypes(
     Some(pop)
 }
 
-#[test]
-fn run_sim() {
-    let params = SimParams {
-        seed: 666,
-        size: 1000,
-        num_generations: 1000,
-        mutation_rate: 1e-1,
-    };
-    // Empty genetic map == no recombination
-    let builder = forrustts::genetics::GeneticMapBuilder::default();
-    let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
-    let _ = evolve_pop_with_haplotypes(params, genetic_map).unwrap();
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use proptest::prelude::*;
+
+    proptest! {
+            #[test]
+            fn run_sim_no_recombination(seed in 0..u64::MAX) {
+                let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+                let make_mutrate = rand_distr::Exp::new(1.0).unwrap();
+                let mutation_rate = rng.sample(make_mutrate);
+                let params = SimParams {
+                    seed,
+                    size: 100,
+                    num_generations: 100,
+                    mutation_rate,
+                };
+                // Empty genetic map == no recombination
+                let builder = forrustts::genetics::GeneticMapBuilder::default();
+                let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
+                let _ = evolve_pop_with_haplotypes(params, genetic_map).unwrap();
+            }
+    }
 }

@@ -51,14 +51,16 @@ impl Haplotypes {
         let mutations = &self.mutations[index_range.start..index_range.stop];
         ParentalGenome {
             mutations,
-            current_index: 0,
+            current_mutation_index: 0,
+            genome,
         }
     }
 }
 
 struct ParentalGenome<'a> {
     mutations: &'a [usize],
-    current_index: usize,
+    current_mutation_index: usize,
+    genome: usize,
 }
 
 // Implementation is specific to "diploid",
@@ -222,15 +224,15 @@ fn generate_offspring_genome(
     let start = offspring_haplotypes.mutations.len();
     let nm = new_mutations.len();
     for m in new_mutations.iter() {
-        let n = first_genome.mutations[first_genome.current_index..]
+        let n = first_genome.mutations[first_genome.current_mutation_index..]
             .iter()
             .take_while(|mutation| mutations[**mutation].position() < mutations[*m].position())
             .inspect(|x| offspring_haplotypes.mutations.push(**x))
             .count();
         offspring_haplotypes.mutations.push(*m);
-        first_genome.current_index += n;
+        first_genome.current_mutation_index += n;
     }
-    first_genome.mutations[first_genome.current_index..]
+    first_genome.mutations[first_genome.current_mutation_index..]
         .iter()
         .for_each(|m| offspring_haplotypes.mutations.push(*m));
     let stop = offspring_haplotypes.mutations.len();

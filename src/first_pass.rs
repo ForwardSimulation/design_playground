@@ -39,6 +39,7 @@ struct MutationRange {
     stop: usize,
 }
 
+#[derive(Debug)]
 struct Haplotypes {
     haplotypes: Vec<MutationRange>,
     mutations: Vec<usize>,
@@ -198,7 +199,19 @@ fn make_offspring_genome(
     if parent_range.stop > parent_range.start {
         unimplemented!("co-process new mutations and parental mutations");
     } else {
-        unimplemented!("if there are new mutations, create a new gamete, else return empty gamete");
+        if new_mutations.is_empty() {
+            return 0;
+        }
+        let start = offspring_haplotypes.mutations.len();
+        for m in new_mutations.into_iter() {
+            offspring_haplotypes.mutations.push(m);
+        }
+        let stop = offspring_haplotypes.mutations.len();
+        let rv = offspring_haplotypes.haplotypes.len();
+        offspring_haplotypes
+            .haplotypes
+            .push(MutationRange { start, stop });
+        rv
     }
 }
 
@@ -228,8 +241,9 @@ pub fn evolve_pop_with_haplotypes(
         Position::new_valid(1000000),
     );
 
-    let mut offspring_haplotypes = Haplotypes::default();
     for generation in 0..params.num_generations {
+        let mut offspring_haplotypes = Haplotypes::default();
+        let mut offspring = vec![];
         let mut queue = pop.mutation_recycling();
         for birth in 0..params.size {
             // Pick two parents
@@ -249,7 +263,7 @@ pub fn evolve_pop_with_haplotypes(
             // ignore recombination and Mendel for now
             // and only pass on the 1st genome from
             // a parent + mutations
-            let key = make_offspring_genome(
+            let first = make_offspring_genome(
                 pop.individuals[parent1],
                 &pop.haplotypes,
                 &pop.mutations,
@@ -257,7 +271,29 @@ pub fn evolve_pop_with_haplotypes(
                 &[], // no recombination for now...
                 &mut offspring_haplotypes,
             );
+
+            let mutations = generate_mutations(
+                generation,
+                num_mutations,
+                position_generator,
+                &mut queue,
+                &mut pop.mutations,
+                &mut rng,
+            );
+
+            let second = make_offspring_genome(
+                pop.individuals[parent2],
+                &pop.haplotypes,
+                &pop.mutations,
+                mutations,
+                &[], // no recombination for now...
+                &mut offspring_haplotypes,
+            );
+            offspring.push(DiploidGenome { first, second });
         }
+        pop.haplotypes = offspring_haplotypes;
+        pop.individuals = offspring;
+        // println!("{:?}", pop.haplotypes);
     }
 
     Some(pop)

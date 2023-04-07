@@ -335,6 +335,7 @@ fn run_sim() {
         num_generations: 1000,
         mutation_rate: 1e-1,
     };
+    // Empty genetic map == no recombination
     let builder = forrustts::genetics::GeneticMapBuilder::default();
     let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
     let _ = evolve_pop_with_haplotypes(params, genetic_map).unwrap();

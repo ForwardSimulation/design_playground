@@ -183,8 +183,15 @@ fn generate_offspring_genome(
     new_mutations: Vec<usize>,
     breakpoints: &[Breakpoint],
     offspring_haplotypes: &mut Haplotypes,
+    rng: &mut rand::rngs::StdRng,
 ) -> usize {
-    let parent_range = parent_haplotypes.haplotypes[parent.first];
+    let u01 = rand::distributions::Uniform::new(0., 1.);
+    let genome = if rng.sample(u01) < 0.5 {
+        parent.first
+    } else {
+        parent.second
+    };
+    let parent_range = parent_haplotypes.haplotypes[genome];
     let mut rv = 0;
     let parent_slice = &parent_haplotypes.mutations[parent_range.start..parent_range.stop];
     let mut i = 0;
@@ -273,6 +280,7 @@ pub fn evolve_pop_with_haplotypes(
                 mutations,
                 &[], // no recombination for now...
                 &mut offspring_haplotypes,
+                &mut rng,
             );
 
             let mutations = generate_mutations(
@@ -291,6 +299,7 @@ pub fn evolve_pop_with_haplotypes(
                 mutations,
                 &[], // no recombination for now...
                 &mut offspring_haplotypes,
+                &mut rng,
             );
             offspring.push(DiploidGenome { first, second });
         }

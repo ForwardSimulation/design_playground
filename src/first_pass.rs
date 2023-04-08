@@ -210,7 +210,7 @@ fn generate_offspring_genome(
     if rng.sample(u01) < 0.5 {
         std::mem::swap(&mut first_genome, &mut second_genome);
     }
-    let mut rv = 0;
+    let mut rv = usize::MAX;
     let start = offspring_haplotypes.mutations.len();
     let nm = new_mutations.len();
     for m in new_mutations.iter() {

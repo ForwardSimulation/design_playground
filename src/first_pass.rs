@@ -257,7 +257,7 @@ fn generate_offspring_genome2(
     if rng.sample(u01) < 0.5 {
         std::mem::swap(&mut first_genome, &mut second_genome);
     }
-    let mut rv = 0;
+    let mut rv = usize::MAX;
     if breakpoints.is_empty() && new_mutations.is_empty() {
         // Then we have aready processed this genome
         if parent_haplotype_map[first_genome.genome] != usize::MAX {

@@ -447,4 +447,16 @@ mod tests_to_delete {
         assert_eq!(s0, &[3, 4]);
         assert_eq!(s1, &[1, 2]);
     }
+
+    #[test]
+    fn test_size() {
+        // This is one idea of production code
+        // could employ for "haplotype keys".
+        struct X(std::num::NonZeroUsize);
+        assert_eq!(std::mem::size_of::<X>(), std::mem::size_of::<usize>());
+        assert_eq!(
+            std::mem::size_of::<Option<X>>(),
+            std::mem::size_of::<usize>()
+        );
+    }
 }

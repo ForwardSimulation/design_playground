@@ -39,7 +39,7 @@ struct MutationRange {
     stop: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct Haplotypes {
     haplotypes: Vec<MutationRange>,
     mutations: Vec<usize>,
@@ -47,12 +47,20 @@ struct Haplotypes {
 
 impl Haplotypes {
     fn get_genome(&self, genome: usize) -> ParentalGenome {
-        let index_range = self.haplotypes[genome];
-        let mutations = &self.mutations[index_range.start..index_range.stop];
-        ParentalGenome {
-            mutations,
-            current_mutation_index: 0,
-            genome,
+        if genome != usize::MAX {
+            let index_range = self.haplotypes[genome];
+            let mutations = &self.mutations[index_range.start..index_range.stop];
+            ParentalGenome {
+                mutations,
+                current_mutation_index: 0,
+                genome,
+            }
+        } else {
+            ParentalGenome {
+                mutations: &[],
+                current_mutation_index: 0,
+                genome,
+            }
         }
     }
 }
@@ -73,22 +81,6 @@ fn get_parental_genomes(
         haplotypes.get_genome(parent.first),
         haplotypes.get_genome(parent.second),
     )
-}
-
-// FIXME: We are not using the type system
-// well here.
-// We need a way for a DiploidGenome
-// to indicate that one of its elements
-// is mutation-free.  Option<usize>
-// seems the best here, but costs 2x the storage.
-impl Default for Haplotypes {
-    fn default() -> Self {
-        let haplotypes = vec![MutationRange { start: 0, stop: 0 }];
-        Self {
-            haplotypes,
-            mutations: vec![],
-        }
-    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -118,7 +110,7 @@ impl DiploidPopWithHaplotypes {
 
             // Now, everyone starts with a single "empty"
             // genome
-            let individuals = vec![DiploidGenome::new(0, 0); size as usize];
+            let individuals = vec![DiploidGenome::new(usize::MAX, usize::MAX); size as usize];
 
             Some(Self {
                 haplotypes,

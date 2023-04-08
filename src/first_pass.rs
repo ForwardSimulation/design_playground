@@ -83,6 +83,9 @@ fn get_parental_genomes(
     )
 }
 
+// NOTE: we use usize::MAX to indicate a
+// "no genome" state. Production
+// code would do better.
 #[derive(Copy, Clone, Debug)]
 struct DiploidGenome {
     first: usize,

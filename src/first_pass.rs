@@ -1,7 +1,7 @@
 use rand::prelude::Rng;
 use rand::SeedableRng;
 
-use forrustts::genetics::{Breakpoint, GeneticMap};
+use forrustts::genetics::{Breakpoint, GeneticMap, GenerateBreakpoints};
 use forrustts::prelude::*;
 
 // We need a type with a more complex
@@ -450,6 +450,8 @@ pub fn evolve_pop_with_haplotypes(
         Position::new_valid(1000000),
     );
 
+    let mut genetic_map = genetic_map;
+
     //let mut parent_haplotype_map = vec![];
     for generation in 0..params.num_generations {
         let mut offspring_haplotypes = Haplotypes::default();
@@ -472,6 +474,8 @@ pub fn evolve_pop_with_haplotypes(
                 &mut rng,
             );
 
+            genetic_map.generate_breakpoints(&mut rng);
+
             // ignore recombination and Mendel for now
             // and only pass on the 1st genome from
             // a parent + mutations
@@ -480,7 +484,7 @@ pub fn evolve_pop_with_haplotypes(
                 &pop.haplotypes,
                 &pop.mutations,
                 mutations,
-                &[], // no recombination for now...
+                genetic_map.breakpoints(),
                 &mut offspring_haplotypes,
                 &mut rng,
             );
@@ -494,12 +498,14 @@ pub fn evolve_pop_with_haplotypes(
                 &mut rng,
             );
 
+            genetic_map.generate_breakpoints(&mut rng);
+
             let second = generate_offspring_genome_test(
                 pop.individuals[parent2],
                 &pop.haplotypes,
                 &pop.mutations,
                 mutations,
-                &[], // no recombination for now...
+                genetic_map.breakpoints(),
                 &mut offspring_haplotypes,
                 &mut rng,
             );

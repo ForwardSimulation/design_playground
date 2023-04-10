@@ -242,9 +242,8 @@ fn merge_mutations(
         offspring_haplotypes.push(*m);
         current_genome.current_mutation_index += n;
     }
-    current_genome.mutations[current_genome.current_mutation_index..]
-        .iter()
-        .for_each(|m| offspring_haplotypes.push(*m));
+    offspring_haplotypes
+        .extend_from_slice(&current_genome.mutations[current_genome.current_mutation_index..]);
 }
 
 // This has had a lot of refactoring and still

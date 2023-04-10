@@ -195,10 +195,6 @@ fn generate_mutations(
     rv
 }
 
-// NOTE: much of the behavior
-// here should be associated fns
-// of various types and/or other
-// standalone fns.
 fn generate_offspring_genome(
     parent: DiploidGenome,
     parent_haplotypes: &Haplotypes,
@@ -240,6 +236,66 @@ fn generate_offspring_genome(
         nm + first_genome.mutations.len(),
         "{:?} + {new_mutations:?} = {:?}",
         first_genome.mutations,
+        &offspring_haplotypes.mutations[start..stop]
+    );
+    rv
+}
+
+fn merge_mutations(
+    mutations: &[Mutation],
+    new_mutations: &[usize],
+    offspring_haplotypes: &mut Haplotypes,
+    current_genome: &mut ParentalGenome,
+) {
+    for m in new_mutations.iter() {
+        let n = current_genome.mutations[current_genome.current_mutation_index..]
+            .iter()
+            .take_while(|mutation| mutations[**mutation].position() < mutations[*m].position())
+            .inspect(|x| offspring_haplotypes.mutations.push(**x))
+            .count();
+        offspring_haplotypes.mutations.push(*m);
+        current_genome.current_mutation_index += n;
+    }
+    current_genome.mutations[current_genome.current_mutation_index..]
+        .iter()
+        .for_each(|m| offspring_haplotypes.mutations.push(*m));
+}
+
+fn generate_offspring_genome_test(
+    parent: DiploidGenome,
+    parent_haplotypes: &Haplotypes,
+    mutations: &[Mutation],
+    new_mutations: Vec<usize>,
+    breakpoints: &[Breakpoint],
+    offspring_haplotypes: &mut Haplotypes,
+    rng: &mut rand::rngs::StdRng,
+) -> usize {
+    let u01 = rand::distributions::Uniform::new(0., 1.);
+    let (mut current_genome, mut other_genome) = get_parental_genomes(parent_haplotypes, parent);
+    if rng.sample(u01) < 0.5 {
+        std::mem::swap(&mut current_genome, &mut other_genome);
+    }
+    let mut rv = usize::MAX;
+    let start = offspring_haplotypes.mutations.len();
+    let nm = new_mutations.len();
+    merge_mutations(
+        mutations,
+        &new_mutations,
+        offspring_haplotypes,
+        &mut current_genome,
+    );
+    let stop = offspring_haplotypes.mutations.len();
+    if stop > start {
+        rv = offspring_haplotypes.haplotypes.len();
+        offspring_haplotypes
+            .haplotypes
+            .push(MutationRange { start, stop });
+    }
+    assert_eq!(
+        stop - start,
+        nm + current_genome.mutations.len(),
+        "{:?} + {new_mutations:?} = {:?}",
+        current_genome.mutations,
         &offspring_haplotypes.mutations[start..stop]
     );
     rv
@@ -353,7 +409,7 @@ pub fn evolve_pop_with_haplotypes(
             // ignore recombination and Mendel for now
             // and only pass on the 1st genome from
             // a parent + mutations
-            let first = generate_offspring_genome(
+            let first = generate_offspring_genome_test(
                 pop.individuals[parent1],
                 &pop.haplotypes,
                 &pop.mutations,
@@ -372,7 +428,7 @@ pub fn evolve_pop_with_haplotypes(
                 &mut rng,
             );
 
-            let second = generate_offspring_genome(
+            let second = generate_offspring_genome_test(
                 pop.individuals[parent2],
                 &pop.haplotypes,
                 &pop.mutations,

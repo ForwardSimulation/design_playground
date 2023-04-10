@@ -684,6 +684,7 @@ mod test_create_offspring_genome {
         }
 
         new_mutations.sort_by(|i, j| mutations[*i].position().cmp(&mutations[*j].position()));
+        breakpoints.sort();
         haploid_genomes[0..nmuts1]
             .sort_by(|i, j| mutations[*i].position().cmp(&mutations[*j].position()));
         haploid_genomes[nmuts1..]

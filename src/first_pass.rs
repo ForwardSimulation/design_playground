@@ -269,7 +269,6 @@ fn generate_offspring_genome_test(
     breakpoints: &[Breakpoint],
     offspring_haplotypes: &mut Haplotypes,
 ) -> usize {
-    let u01 = rand::distributions::Uniform::new(0., 1.);
     let (mut current_genome, mut other_genome) = genomes;
     let mut rv = usize::MAX;
     let start = offspring_haplotypes.mutations.len();

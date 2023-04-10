@@ -154,6 +154,16 @@ impl DiploidPopWithHaplotypes {
             .iter()
             .for_each(|m| self.mutation_counts[*m] += 1);
     }
+
+    pub fn num_segregating_mutations(&self) -> u32 {
+        let mut nseg = 0;
+        for i in &self.mutation_counts {
+            if i > &0 && (*i as usize) < 2 * self.individuals.len() {
+                nseg += 1;
+            }
+        }
+        nseg
+    }
 }
 
 pub struct SimParams {
@@ -489,7 +499,6 @@ pub fn evolve_pop_with_haplotypes(
         // );
         //println!("done with {generation}, {}", pop.mutations.len());
     }
-
     Some(pop)
 }
 

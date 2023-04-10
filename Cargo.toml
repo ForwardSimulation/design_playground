@@ -11,4 +11,5 @@ rand = "0.8.5"
 rand_distr = "0.4.3"
 
 [dev-dependencies]
+clap = { version = "4.2.1", features = ["derive"] }
 proptest = "1.1.0"

@@ -307,6 +307,7 @@ fn generate_offspring_genome_test(
                     _ => unimplemented!("unhandled Breakpoint variant"),
                 })
                 .inspect(|k| {
+                    println!("k = {:?}", k);
                     current_genome.current_mutation_index += current_genome
                         .mutations
                         .iter()

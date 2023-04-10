@@ -161,6 +161,7 @@ pub struct SimParams {
     pub size: u32,
     pub num_generations: u32,
     pub mutation_rate: f64,
+    pub recrate: f64,
 }
 
 // NOTE: we can be smarter than this

@@ -14,6 +14,8 @@ struct Args {
     #[arg(short, long)]
     mu: f64,
     #[arg(short, long)]
+    r: f64,
+    #[arg(short, long)]
     nsteps: u32,
 }
 
@@ -24,8 +26,9 @@ fn main() {
         size: args.popsize,
         num_generations: args.nsteps,
         mutation_rate: args.mu,
+        recrate: args.r,
     };
-    let poisson = vec![PoissonCrossover::new(0, 1000000, 1e-1).unwrap()];
+    let poisson = vec![PoissonCrossover::new(0, 1000000, params.recrate).unwrap()];
     let builder = GeneticMapBuilder::default().extend_poisson(&poisson);
     let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
     evolve_pop_with_haplotypes(params, genetic_map).unwrap();

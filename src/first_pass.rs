@@ -139,7 +139,8 @@ impl DiploidPopWithHaplotypes {
     }
 
     /// Generate indexes of extinct mutations
-    pub fn mutation_recycling(&self) -> Vec<usize> {
+    #[inline(never)]
+    fn mutation_recycling(&self) -> Vec<usize> {
         self.mutation_counts
             .iter()
             .enumerate()
@@ -157,6 +158,7 @@ impl DiploidPopWithHaplotypes {
             .for_each(|m| self.mutation_counts[*m] += 1);
     }
 
+    #[inline(never)]
     pub fn num_segregating_mutations(&self) -> u32 {
         let mut nseg = 0;
         for i in &self.mutation_counts {
@@ -268,19 +270,16 @@ fn generate_offspring_genome(
     } else {
         let mut mut_index = 0_usize;
         for b in breakpoints {
+            let bpos = match b {
+                // NOTE: forrustts needs to handle this
+                // comparison with trat impls
+                forrustts::genetics::Breakpoint::Crossover(pos) => *pos,
+                forrustts::genetics::Breakpoint::IndependentAssortment(pos) => *pos,
+                _ => unimplemented!("unhandled Breakpoint variant"),
+            };
             mut_index += new_mutations[mut_index..]
                 .iter()
-                .take_while(|k| match b {
-                    // NOTE: forrustts needs to handle this
-                    // comparison with trat impls
-                    forrustts::genetics::Breakpoint::Crossover(pos) => {
-                        mutations[**k].position() < *pos
-                    }
-                    forrustts::genetics::Breakpoint::IndependentAssortment(pos) => {
-                        mutations[**k].position() < *pos
-                    }
-                    _ => unimplemented!("unhandled Breakpoint variant"),
-                })
+                .take_while(|k| mutations[**k].position() < bpos)
                 .inspect(|k| {
                     current_genome.current_mutation_index += current_genome.mutations
                         [current_genome.current_mutation_index..]
@@ -294,17 +293,7 @@ fn generate_offspring_genome(
             current_genome.current_mutation_index += current_genome.mutations
                 [current_genome.current_mutation_index..]
                 .iter()
-                .take_while(|gk| match b {
-                    // NOTE: forrustts needs to handle this
-                    // comparison with trat impls
-                    forrustts::genetics::Breakpoint::Crossover(pos) => {
-                        mutations[**gk].position() < *pos
-                    }
-                    forrustts::genetics::Breakpoint::IndependentAssortment(pos) => {
-                        mutations[**gk].position() < *pos
-                    }
-                    _ => unimplemented!("unhandled Breakpoint variant"),
-                })
+                .take_while(|gk| mutations[**gk].position() < bpos)
                 .inspect(|gk| offspring_mutations.push(**gk))
                 .count();
 
@@ -312,17 +301,7 @@ fn generate_offspring_genome(
             other_genome.current_mutation_index += other_genome.mutations
                 [other_genome.current_mutation_index..]
                 .iter()
-                .take_while(|gk| match b {
-                    // NOTE: forrustts needs to handle this
-                    // comparison with trat impls
-                    forrustts::genetics::Breakpoint::Crossover(pos) => {
-                        mutations[**gk].position() < *pos
-                    }
-                    forrustts::genetics::Breakpoint::IndependentAssortment(pos) => {
-                        mutations[**gk].position() < *pos
-                    }
-                    _ => unimplemented!("unhandled Breakpoint variant"),
-                })
+                .take_while(|gk| mutations[**gk].position() < bpos)
                 .count();
 
             std::mem::swap(&mut current_genome, &mut other_genome);

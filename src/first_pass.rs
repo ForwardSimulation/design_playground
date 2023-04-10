@@ -879,6 +879,16 @@ mod test_create_offspring_genome {
         let nbreakpoints = 1;
         run(seed, nmuts1, nmuts2, num_new_mutations, nbreakpoints);
     }
+
+    #[test]
+    fn proptest_regression_4() {
+        let seed = 2727126891865037407_u64;
+        let nmuts1 = 20;
+        let nmuts2 = 11;
+        let num_new_mutations = 4;
+        let nbreakpoints = 1;
+        run(seed, nmuts1, nmuts2, num_new_mutations, nbreakpoints);
+    }
 }
 
 #[cfg(test)]

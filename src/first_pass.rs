@@ -75,6 +75,7 @@ impl Haplotypes {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
 struct ParentalGenome<'a> {
     mutations: &'a [usize],
     current_mutation_index: usize,
@@ -279,6 +280,7 @@ fn generate_offspring_genome_test(
     breakpoints: &[Breakpoint],
     offspring_mutations: &mut Vec<usize>,
 ) -> MutationRange {
+    println!("{new_mutations:?}");
     let (mut current_genome, mut other_genome) = genomes;
     let start = offspring_mutations.len();
     if breakpoints.is_empty() {
@@ -551,47 +553,237 @@ mod tests {
     use proptest::prelude::*;
 
     proptest! {
-            #[test]
-            fn run_sim_no_recombination(seed in 0..u64::MAX) {
-                let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
-                let make_mutrate = rand_distr::Exp::new(1.0).unwrap();
-                let mutation_rate = rng.sample(make_mutrate);
-                let params = SimParams {
-                    seed,
-                    size: 100,
-                    num_generations: 100,
-                    mutation_rate,
-                };
-                // Empty genetic map == no recombination
-                let builder = forrustts::genetics::GeneticMapBuilder::default();
-                let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
-                let _ = evolve_pop_with_haplotypes(params, genetic_map).unwrap();
-            }
+        #[test]
+        fn run_sim_no_recombination(seed in 0..u64::MAX) {
+            let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+            let make_mutrate = rand_distr::Exp::new(1.0).unwrap();
+            let mutation_rate = rng.sample(make_mutrate);
+            let params = SimParams {
+                seed,
+                size: 100,
+                num_generations: 100,
+                mutation_rate,
+            };
+            // Empty genetic map == no recombination
+            let builder = forrustts::genetics::GeneticMapBuilder::default();
+            let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
+            let _ = evolve_pop_with_haplotypes(params, genetic_map).unwrap();
+        }
     }
 
     proptest! {
-            #[test]
-            fn run_sim_with_recombination(seed in 0..u64::MAX) {
-                let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
-                let make_mutrate = rand_distr::Exp::new(1.0).unwrap();
-                let mutation_rate = rng.sample(make_mutrate);
-                let params = SimParams {
-                    seed,
-                    size: 100,
-                    num_generations: 100,
-                    mutation_rate,
-                };
+        #[test]
+        fn run_sim_with_recombination(seed in 0..u64::MAX) {
+            let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+            let make_mutrate = rand_distr::Exp::new(1.0).unwrap();
+            let mutation_rate = rng.sample(make_mutrate);
+            let params = SimParams {
+                seed,
+                size: 100,
+                num_generations: 100,
+                mutation_rate,
+            };
 
-                let genome_start = Position::new_valid(0);
-                let genome_length = Position::new_valid(1000000);
-                let poisson = vec![forrustts::genetics::PoissonCrossover::new(
-                    genome_start, genome_length, 2.0).unwrap()];
-                // Empty genetic map == no recombination
-                let builder = forrustts::genetics::GeneticMapBuilder::default().extend_poisson(&poisson);
+            let genome_start = Position::new_valid(0);
+            let genome_length = Position::new_valid(1000000);
+            let poisson = vec![forrustts::genetics::PoissonCrossover::new(
+                genome_start, genome_length, 2.0).unwrap()];
+            // Empty genetic map == no recombination
+            let builder = forrustts::genetics::GeneticMapBuilder::default().extend_poisson(&poisson);
 
-                let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
-                let _ = evolve_pop_with_haplotypes(params, genetic_map).unwrap();
+            let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
+            let _ = evolve_pop_with_haplotypes(params, genetic_map).unwrap();
+        }
+    }
+}
+
+#[cfg(test)]
+mod test_create_offspring_genome {
+    use super::*;
+    use proptest::prelude::*;
+
+    fn setup(
+        seed: u64,
+        nmuts1: usize,
+        nmuts2: usize,
+        num_new_mutations: usize,
+        nbreakpoints: usize,
+    ) -> (
+        Vec<Mutation>,
+        Vec<usize>,
+        Vec<usize>,
+        Vec<forrustts::genetics::Breakpoint>,
+    ) {
+        let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+        let start = forrustts::Position::new_valid(0);
+        let stop = forrustts::Position::new_valid(100000);
+        let makepos = rand::distributions::Uniform::new(start, stop);
+
+        let mut mutations = vec![];
+        let mut haploid_genomes = vec![];
+        for _ in 0..(nmuts1 + nmuts2) {
+            let position = rng.sample(makepos);
+            let m = Mutation {
+                position,
+                effect_sizes: vec![0.1],
+                origin_time: 0.into(),
+            };
+            haploid_genomes.push(mutations.len());
+            mutations.push(m);
+        }
+
+        let mut new_mutations = vec![];
+        for _ in 0..(num_new_mutations) {
+            let position = rng.sample(makepos);
+            let m = Mutation {
+                position,
+                effect_sizes: vec![0.1],
+                origin_time: 0.into(),
+            };
+            new_mutations.push(mutations.len());
+            mutations.push(m);
+        }
+
+        new_mutations.sort_by(|i, j| mutations[*i].position().cmp(&mutations[*j].position()));
+        haploid_genomes[0..nmuts1]
+            .sort_by(|i, j| mutations[*i].position().cmp(&mutations[*j].position()));
+        haploid_genomes[nmuts1..]
+            .sort_by(|i, j| mutations[*i].position().cmp(&mutations[*j].position()));
+        (mutations, haploid_genomes, new_mutations, vec![])
+    }
+
+    fn setup_parents(
+        nmuts1: usize,
+        nmuts2: usize,
+        haploid_genomes: &[usize],
+    ) -> (ParentalGenome, ParentalGenome) {
+        let parent1_genome = if nmuts1 > 0 {
+            ParentalGenome {
+                mutations: &haploid_genomes[0..nmuts1],
+                current_mutation_index: 0,
+                genome: usize::MAX,
             }
+        } else {
+            ParentalGenome {
+                mutations: &[],
+                current_mutation_index: 0,
+                genome: usize::MAX,
+            }
+        };
+        let parent2_genome = if nmuts1 > 0 {
+            ParentalGenome {
+                mutations: &haploid_genomes[nmuts1..(nmuts1 + nmuts2)],
+                current_mutation_index: 0,
+                genome: usize::MAX,
+            }
+        } else {
+            ParentalGenome {
+                mutations: &[],
+                current_mutation_index: 0,
+                genome: usize::MAX,
+            }
+        };
+        (parent1_genome, parent2_genome)
+    }
+
+    fn naive(
+        parents: (ParentalGenome, ParentalGenome),
+        haploid_genomes: &[usize],
+        mutations: &[Mutation],
+        breakpoints: &[Breakpoint],
+        new_mutations: &[usize],
+    ) -> Vec<usize> {
+        let mut kept_breakpoints = vec![];
+        for b in breakpoints.iter() {
+            let x = breakpoints.iter().filter(|&i| b == i).count();
+            if x % 2 == 0 {
+                kept_breakpoints.push(*b);
+            }
+        }
+        let (mut parent1_genome, mut parent2_genome) = parents;
+        let mut lastpos = Position::new_valid(0);
+        let mut output = vec![];
+        for b in breakpoints.iter() {
+            let pos = match b {
+                Breakpoint::Crossover(x) => x,
+                Breakpoint::IndependentAssortment(x) => x,
+                _ => unimplemented!("bad"),
+            };
+            parent1_genome
+                .mutations
+                .iter()
+                .filter(|&k| mutations[*k].position() >= lastpos && mutations[*k].position() < *pos)
+                .for_each(|a| output.push(*a));
+            lastpos = *pos;
+            std::mem::swap(&mut parent1_genome, &mut parent2_genome);
+        }
+        parent1_genome
+            .mutations
+            .iter()
+            .filter(|&k| mutations[*k].position() >= lastpos)
+            .for_each(|a| output.push(*a));
+        for m in new_mutations {
+            output.push(*m);
+        }
+        assert!(output
+            .windows(2)
+            .all(|w| mutations[w[0]].position() <= mutations[w[1]].position()),);
+        output.sort_by(|i, j| mutations[*i].position().cmp(&mutations[*j].position()));
+        output
+    }
+
+    fn run(seed: u64, nmuts1: usize, nmuts2: usize, num_new_mutations: usize, nbreakpoints: usize) {
+        let (mutations, haploid_genomes, new_mutations, breakpoints) =
+            setup(seed, nmuts1, nmuts2, num_new_mutations, nbreakpoints);
+        let (parent1_genome, parent2_genome) = setup_parents(nmuts1, nmuts2, &haploid_genomes);
+        assert!(parent1_genome
+            .mutations
+            .windows(2)
+            .all(|w| mutations[w[0]].position() <= mutations[w[1]].position()),);
+        assert!(parent2_genome
+            .mutations
+            .windows(2)
+            .all(|w| mutations[w[0]].position() <= mutations[w[1]].position()),);
+        let mut offspring_genomes = Vec::<usize>::new();
+        let range = generate_offspring_genome_test(
+            (parent1_genome, parent2_genome),
+            &mutations,
+            new_mutations.clone(),
+            &breakpoints,
+            &mut offspring_genomes,
+        );
+        println!(
+            "{:?} + {:?}, {:?}",
+            parent1_genome.mutations, new_mutations, range
+        );
+        let naive_output = naive(
+            (parent1_genome, parent2_genome),
+            &haploid_genomes,
+            &mutations,
+            &breakpoints,
+            &new_mutations,
+        );
+        assert!(naive_output
+            .windows(2)
+            .all(|w| mutations[w[0]].position() <= mutations[w[1]].position()),);
+        assert_eq!(&naive_output, &offspring_genomes[range.start..range.stop]);
+    }
+
+    proptest! {
+        #[test]
+        fn test_with_no_breakpoints(seed in 0..u64::MAX,
+                                    nmuts1 in 0..=50_usize,
+                                    nmuts2 in 0..=50_usize,
+                                    num_new_mutations in 0..50_usize,
+                                    )
+        {
+            run(seed, nmuts1, nmuts2, num_new_mutations, 0);
+        }
+    }
+
+    #[test]
+    fn failing_test_0() {
+        run(0, 0, 0, 1, 0);
     }
 }
 

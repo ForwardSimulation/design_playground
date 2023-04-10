@@ -386,6 +386,11 @@ pub fn evolve_pop_with_haplotypes(
         pop.haplotypes = offspring_haplotypes;
         pop.individuals = offspring;
         pop.count_mutations();
+        // for h in &pop.haplotypes.haplotypes {
+        //     assert!(pop.haplotypes.mutations[h.start..h.stop]
+        //         .windows(2)
+        //         .all(|w| pop.mutations[w[0]].position() <= pop.mutations[w[1]].position()));
+        // }
         // println!(
         //     "{} {}/{}",
         //     params.mutation_rate,

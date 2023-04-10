@@ -351,6 +351,12 @@ fn generate_offspring_genome_test(
 
             std::mem::swap(&mut current_genome, &mut other_genome);
         }
+        merge_mutations(
+            mutations,
+            &new_mutations[mut_index..],
+            offspring_mutations,
+            &mut current_genome,
+        )
     }
     let stop = offspring_mutations.len();
     MutationRange { start, stop }
@@ -708,7 +714,7 @@ mod test_create_offspring_genome {
         let mut lastpos = Position::new_valid(0);
         let mut output = vec![];
 
-        for b in breakpoints.iter() {
+        for b in kept_breakpoints.iter() {
             let pos = match b {
                 Breakpoint::Crossover(x) => x,
                 Breakpoint::IndependentAssortment(x) => x,
@@ -794,10 +800,10 @@ mod test_create_offspring_genome {
                                     nmuts1 in 0..=50_usize,
                                     nmuts2 in 0..=50_usize,
                                     num_new_mutations in 0..50_usize,
-                                    nbreakpints in 0..10_usize
+                                    nbreakpoints in 0..10_usize
                                     )
         {
-            run(seed, nmuts1, nmuts2, num_new_mutations, nbreakpints);
+            run(seed, nmuts1, nmuts2, num_new_mutations, nbreakpoints);
         }
     }
 
@@ -813,6 +819,16 @@ mod test_create_offspring_genome {
         let nmuts2 = 32;
         let num_new_mutations = 30;
         run(seed, nmuts1, nmuts2, num_new_mutations, 0);
+    }
+
+    #[test]
+    fn proptest_regression_2() {
+        let seed = 0;
+        let nmuts1 = 1;
+        let nmuts2 = 0;
+        let num_new_mutations = 8;
+        let nbreakpoints = 1;
+        run(seed, nmuts1, nmuts2, num_new_mutations, nbreakpoints);
     }
 }
 

@@ -1,3 +1,4 @@
+use clap::Parser;
 use rand::prelude::Rng;
 use rand::SeedableRng;
 
@@ -166,11 +167,17 @@ impl DiploidPopWithHaplotypes {
     }
 }
 
+#[derive(Parser, Debug)]
 pub struct SimParams {
+    #[arg(short, long)]
     pub seed: u64,
+    #[arg(short, long)]
     pub size: u32,
+    #[arg(short, long)]
     pub num_generations: u32,
+    #[arg(short, long)]
     pub mutation_rate: f64,
+    #[arg(short, long)]
     pub recrate: f64,
 }
 
@@ -519,6 +526,7 @@ mod tests {
                 size: 100,
                 num_generations: 100,
                 mutation_rate,
+                recrate: 0.0,
             };
             // Empty genetic map == no recombination
             let builder = forrustts::genetics::GeneticMapBuilder::default();
@@ -538,6 +546,7 @@ mod tests {
                 size: 100,
                 num_generations: 100,
                 mutation_rate,
+                recrate: 0.0,
             };
 
             let genome_start = Position::new_valid(0);

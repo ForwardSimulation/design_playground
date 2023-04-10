@@ -470,9 +470,6 @@ pub fn evolve_pop_with_haplotypes(
 
             genetic_map.generate_breakpoints(&mut rng);
 
-            // ignore recombination and Mendel for now
-            // and only pass on the 1st genome from
-            // a parent + mutations
             let genomes = get_parental_genomes(&pop.haplotypes, pop.individuals[parent1]);
             let genomes = if rng.sample(u01) < 0.5 {
                 genomes

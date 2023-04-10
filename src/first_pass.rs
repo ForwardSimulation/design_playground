@@ -263,19 +263,14 @@ fn merge_mutations(
 
 // Too much coupling makes all of this untestable.
 fn generate_offspring_genome_test(
-    parent: DiploidGenome,
-    parent_haplotypes: &Haplotypes,
+    genomes: (ParentalGenome, ParentalGenome),
     mutations: &[Mutation],
     new_mutations: Vec<usize>,
     breakpoints: &[Breakpoint],
     offspring_haplotypes: &mut Haplotypes,
-    rng: &mut rand::rngs::StdRng,
 ) -> usize {
     let u01 = rand::distributions::Uniform::new(0., 1.);
-    let (mut current_genome, mut other_genome) = get_parental_genomes(parent_haplotypes, parent);
-    if rng.sample(u01) < 0.5 {
-        std::mem::swap(&mut current_genome, &mut other_genome);
-    }
+    let (mut current_genome, mut other_genome) = genomes;
     let mut rv = usize::MAX;
     let start = offspring_haplotypes.mutations.len();
     if breakpoints.is_empty() {
@@ -447,6 +442,7 @@ pub fn evolve_pop_with_haplotypes(
         Position::new_valid(0),
         Position::new_valid(1000000),
     );
+    let u01 = rand::distributions::Uniform::new(0., 1.);
 
     let mut genetic_map = genetic_map;
 
@@ -477,14 +473,18 @@ pub fn evolve_pop_with_haplotypes(
             // ignore recombination and Mendel for now
             // and only pass on the 1st genome from
             // a parent + mutations
+            let genomes = get_parental_genomes(&pop.haplotypes, pop.individuals[parent1]);
+            let genomes = if rng.sample(u01) < 0.5 {
+                genomes
+            } else {
+                (genomes.1, genomes.0)
+            };
             let first = generate_offspring_genome_test(
-                pop.individuals[parent1],
-                &pop.haplotypes,
+                genomes,
                 &pop.mutations,
                 mutations,
                 genetic_map.breakpoints(),
                 &mut offspring_haplotypes,
-                &mut rng,
             );
 
             let mutations = generate_mutations(
@@ -498,14 +498,18 @@ pub fn evolve_pop_with_haplotypes(
 
             genetic_map.generate_breakpoints(&mut rng);
 
+            let genomes = get_parental_genomes(&pop.haplotypes, pop.individuals[parent2]);
+            let genomes = if rng.sample(u01) < 0.5 {
+                genomes
+            } else {
+                (genomes.1, genomes.0)
+            };
             let second = generate_offspring_genome_test(
-                pop.individuals[parent2],
-                &pop.haplotypes,
+                genomes,
                 &pop.mutations,
                 mutations,
                 genetic_map.breakpoints(),
                 &mut offspring_haplotypes,
-                &mut rng,
             );
             offspring.push(DiploidGenome { first, second });
         }

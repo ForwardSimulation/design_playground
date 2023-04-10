@@ -378,12 +378,12 @@ fn generate_offspring_genome_test(
             other_genome.mutations.len(),
             other_genome.current_mutation_index
         );
-        //merge_mutations(
-        //    mutations,
-        //    &new_mutations[mut_index..],
-        //    offspring_mutations,
-        //    &mut current_genome,
-        //)
+        merge_mutations(
+            mutations,
+            &new_mutations[mut_index..],
+            offspring_mutations,
+            &mut current_genome,
+        )
     }
     let stop = offspring_mutations.len();
     MutationRange { start, stop }
@@ -866,6 +866,16 @@ mod test_create_offspring_genome {
         let nmuts1 = 1;
         let nmuts2 = 0;
         let num_new_mutations = 8;
+        let nbreakpoints = 1;
+        run(seed, nmuts1, nmuts2, num_new_mutations, nbreakpoints);
+    }
+
+    #[test]
+    fn proptest_regression_3() {
+        let seed = 7732215647961344_u64;
+        let nmuts1 = 0;
+        let nmuts2 = 17;
+        let num_new_mutations = 14;
         let nbreakpoints = 1;
         run(seed, nmuts1, nmuts2, num_new_mutations, nbreakpoints);
     }

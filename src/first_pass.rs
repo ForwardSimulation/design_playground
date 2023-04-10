@@ -147,6 +147,7 @@ impl DiploidPopWithHaplotypes {
             .collect::<Vec<usize>>()
     }
 
+    #[inline(never)]
     pub fn count_mutations(&mut self) {
         self.mutation_counts.fill(0);
         self.mutation_counts.resize(self.mutations.len(), 0);
@@ -185,6 +186,7 @@ pub struct SimParams {
 // by using a struct that can populate
 // a Vec and output a slice, thus avoiding
 // one allocation per offspring.
+#[inline(never)]
 fn generate_mutations(
     generation: u32,
     num_mutations: rand_distr::Poisson<f64>,
@@ -224,6 +226,7 @@ fn generate_mutations(
     rv
 }
 
+#[inline(never)]
 fn merge_mutations(
     mutations: &[Mutation],
     new_mutations: &[usize],
@@ -246,6 +249,7 @@ fn merge_mutations(
 
 // This has had a lot of refactoring and still
 // is hard to test in isolation (see tests below).
+#[inline(never)]
 fn generate_offspring_genome(
     genomes: (ParentalGenome, ParentalGenome),
     mutations: &[Mutation],
@@ -403,6 +407,7 @@ impl SimParams {
 
 // A proper implementation
 // would be generic over "generating mutations"
+#[inline(never)]
 pub fn evolve_pop_with_haplotypes(
     params: SimParams,
     genetic_map: GeneticMap,
@@ -426,9 +431,7 @@ pub fn evolve_pop_with_haplotypes(
         let mut offspring_haplotypes = Haplotypes::default();
         let mut offspring = vec![];
         let mut queue = pop.mutation_recycling();
-        //parent_haplotype_map.fill(usize::MAX);
-        //parent_haplotype_map.resize(pop.haplotypes.haplotypes.len(), usize::MAX);
-        for birth in 0..params.size {
+        for _ in 0..params.size {
             // Pick two parents
             let parent1 = rng.sample(parent_picker);
             let parent2 = rng.sample(parent_picker);

@@ -278,12 +278,78 @@ fn generate_offspring_genome_test(
     let mut rv = usize::MAX;
     let start = offspring_haplotypes.mutations.len();
     let nm = new_mutations.len();
-    merge_mutations(
-        mutations,
-        &new_mutations,
-        offspring_haplotypes,
-        &mut current_genome,
-    );
+    if breakpoints.is_empty() {
+        merge_mutations(
+            mutations,
+            &new_mutations,
+            offspring_haplotypes,
+            &mut current_genome,
+        );
+    } else {
+        let mut mut_index = 0_usize;
+        for b in breakpoints {
+            let x = new_mutations[mut_index..]
+                .iter()
+                .take_while(|k| match b {
+                    // NOTE: forrustts needs to handle this
+                    // comparison with trat impls
+                    forrustts::genetics::Breakpoint::Crossover(pos) => {
+                        mutations[**k].position() < *pos
+                    }
+                    forrustts::genetics::Breakpoint::IndependentAssortment(pos) => {
+                        mutations[**k].position() < *pos
+                    }
+                    _ => unimplemented!("unhandled Breakpoint variant"),
+                })
+                .inspect(|k| {
+                    let x = current_genome
+                        .mutations
+                        .iter()
+                        .take_while(|gk| mutations[**gk].position() < mutations[**k].position())
+                        .inspect(|gk| offspring_haplotypes.mutations.push(**gk))
+                        .count();
+                    offspring_haplotypes.mutations.push(**k);
+                    current_genome.current_mutation_index += x;
+                })
+                .count();
+            mut_index += x;
+            let y = current_genome.mutations[current_genome.current_mutation_index..]
+                .iter()
+                .take_while(|gk| match b {
+                    // NOTE: forrustts needs to handle this
+                    // comparison with trat impls
+                    forrustts::genetics::Breakpoint::Crossover(pos) => {
+                        mutations[**gk].position() < *pos
+                    }
+                    forrustts::genetics::Breakpoint::IndependentAssortment(pos) => {
+                        mutations[**gk].position() < *pos
+                    }
+                    _ => unimplemented!("unhandled Breakpoint variant"),
+                })
+                .inspect(|gk| offspring_haplotypes.mutations.push(**gk))
+                .count();
+            current_genome.current_mutation_index += y;
+
+            // Advance other genome
+            other_genome.current_mutation_index += other_genome.mutations
+                [other_genome.current_mutation_index..]
+                .iter()
+                .take_while(|gk| match b {
+                    // NOTE: forrustts needs to handle this
+                    // comparison with trat impls
+                    forrustts::genetics::Breakpoint::Crossover(pos) => {
+                        mutations[**gk].position() < *pos
+                    }
+                    forrustts::genetics::Breakpoint::IndependentAssortment(pos) => {
+                        mutations[**gk].position() < *pos
+                    }
+                    _ => unimplemented!("unhandled Breakpoint variant"),
+                })
+                .count();
+
+            std::mem::swap(&mut current_genome, &mut other_genome);
+        }
+    }
     let stop = offspring_haplotypes.mutations.len();
     if stop > start {
         rv = offspring_haplotypes.haplotypes.len();

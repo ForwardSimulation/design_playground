@@ -63,6 +63,16 @@ impl Haplotypes {
             }
         }
     }
+
+    fn add_range(&mut self, range: MutationRange) -> usize {
+        if range.start == range.stop {
+            usize::MAX
+        } else {
+            let rv = self.haplotypes.len();
+            self.haplotypes.push(range);
+            rv
+        }
+    }
 }
 
 struct ParentalGenome<'a> {
@@ -244,21 +254,21 @@ fn generate_offspring_genome(
 fn merge_mutations(
     mutations: &[Mutation],
     new_mutations: &[usize],
-    offspring_haplotypes: &mut Haplotypes,
+    offspring_haplotypes: &mut Vec<usize>,
     current_genome: &mut ParentalGenome,
 ) {
     for m in new_mutations.iter() {
         let n = current_genome.mutations[current_genome.current_mutation_index..]
             .iter()
             .take_while(|mutation| mutations[**mutation].position() < mutations[*m].position())
-            .inspect(|x| offspring_haplotypes.mutations.push(**x))
+            .inspect(|x| offspring_haplotypes.push(**x))
             .count();
-        offspring_haplotypes.mutations.push(*m);
+        offspring_haplotypes.push(*m);
         current_genome.current_mutation_index += n;
     }
     current_genome.mutations[current_genome.current_mutation_index..]
         .iter()
-        .for_each(|m| offspring_haplotypes.mutations.push(*m));
+        .for_each(|m| offspring_haplotypes.push(*m));
 }
 
 // Too much coupling makes all of this untestable.
@@ -267,16 +277,15 @@ fn generate_offspring_genome_test(
     mutations: &[Mutation],
     new_mutations: Vec<usize>,
     breakpoints: &[Breakpoint],
-    offspring_haplotypes: &mut Haplotypes,
-) -> usize {
+    offspring_mutations: &mut Vec<usize>,
+) -> MutationRange {
     let (mut current_genome, mut other_genome) = genomes;
-    let mut rv = usize::MAX;
-    let start = offspring_haplotypes.mutations.len();
+    let start = offspring_mutations.len();
     if breakpoints.is_empty() {
         merge_mutations(
             mutations,
             &new_mutations,
-            offspring_haplotypes,
+            offspring_mutations,
             &mut current_genome,
         );
     } else {
@@ -300,9 +309,9 @@ fn generate_offspring_genome_test(
                         .mutations
                         .iter()
                         .take_while(|gk| mutations[**gk].position() < mutations[**k].position())
-                        .inspect(|gk| offspring_haplotypes.mutations.push(**gk))
+                        .inspect(|gk| offspring_mutations.push(**gk))
                         .count();
-                    offspring_haplotypes.mutations.push(**k);
+                    offspring_mutations.push(**k);
                 })
                 .count();
             current_genome.current_mutation_index += current_genome.mutations
@@ -319,7 +328,7 @@ fn generate_offspring_genome_test(
                     }
                     _ => unimplemented!("unhandled Breakpoint variant"),
                 })
-                .inspect(|gk| offspring_haplotypes.mutations.push(**gk))
+                .inspect(|gk| offspring_mutations.push(**gk))
                 .count();
 
             // Advance other genome
@@ -342,13 +351,14 @@ fn generate_offspring_genome_test(
             std::mem::swap(&mut current_genome, &mut other_genome);
         }
     }
-    let stop = offspring_haplotypes.mutations.len();
-    if stop > start {
-        rv = offspring_haplotypes.haplotypes.len();
-        offspring_haplotypes
-            .haplotypes
-            .push(MutationRange { start, stop });
-    }
+    let stop = offspring_mutations.len();
+    MutationRange { start, stop }
+    //if stop > start {
+    //    rv = offspring_mutations.len();
+    //    offspring_mutations
+    //        .haplotypes
+    //        .push(MutationRange { start, stop });
+    //}
     //assert_eq!(
     //    stop - start,
     //    nm + current_genome.mutations.len(),
@@ -356,7 +366,7 @@ fn generate_offspring_genome_test(
     //    current_genome.mutations,
     //    &offspring_haplotypes.mutations[start..stop]
     //);
-    rv
+    //rv
 }
 
 fn generate_offspring_genome2(
@@ -475,13 +485,14 @@ pub fn evolve_pop_with_haplotypes(
             } else {
                 (genomes.1, genomes.0)
             };
-            let first = generate_offspring_genome_test(
+            let range = generate_offspring_genome_test(
                 genomes,
                 &pop.mutations,
                 mutations,
                 genetic_map.breakpoints(),
-                &mut offspring_haplotypes,
+                &mut offspring_haplotypes.mutations,
             );
+            let first = offspring_haplotypes.add_range(range);
 
             let mutations = generate_mutations(
                 generation,
@@ -500,13 +511,14 @@ pub fn evolve_pop_with_haplotypes(
             } else {
                 (genomes.1, genomes.0)
             };
-            let second = generate_offspring_genome_test(
+            let range = generate_offspring_genome_test(
                 genomes,
                 &pop.mutations,
                 mutations,
                 genetic_map.breakpoints(),
-                &mut offspring_haplotypes,
+                &mut offspring_haplotypes.mutations,
             );
+            let second = offspring_haplotypes.add_range(range);
             offspring.push(DiploidGenome { first, second });
         }
         pop.haplotypes = offspring_haplotypes;

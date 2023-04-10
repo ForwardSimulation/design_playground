@@ -622,7 +622,7 @@ mod tests {
 #[cfg(test)]
 mod test_create_offspring_genome {
     use super::*;
-    use proptest::{prelude::*, option::of};
+    use proptest::{option::of, prelude::*};
 
     fn setup(
         seed: u64,
@@ -757,6 +757,16 @@ mod test_create_offspring_genome {
         output
     }
 
+    fn keys_to_positions(mutations: &[Mutation], keys: &[usize]) -> Vec<i64> {
+        let mut rv = vec![];
+
+        for k in keys {
+            rv.push(mutations[*k].position().into())
+        }
+
+        rv
+    }
+
     fn run(seed: u64, nmuts1: usize, nmuts2: usize, num_new_mutations: usize, nbreakpoints: usize) {
         let (mutations, haploid_genomes, new_mutations, breakpoints) =
             setup(seed, nmuts1, nmuts2, num_new_mutations, nbreakpoints);
@@ -791,12 +801,12 @@ mod test_create_offspring_genome {
             naive_output.len(),
             offspring_genomes.len(),
             "[{:?}, {:?}] + {:?} & {:?} = {:?} and {:?}",
-            parent1_genome.mutations,
-            parent2_genome.mutations,
-            new_mutations,
+            keys_to_positions(&mutations, parent1_genome.mutations),
+            keys_to_positions(&mutations, parent2_genome.mutations),
+            keys_to_positions(&mutations, &new_mutations),
             breakpoints,
-            naive_output,
-            offspring_genomes,
+            keys_to_positions(&mutations, &naive_output),
+            keys_to_positions(&mutations, &offspring_genomes),
         );
         for i in &offspring_genomes {
             assert_eq!(naive_output.iter().filter(|&j| j == i).count(), 1);

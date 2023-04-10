@@ -280,7 +280,6 @@ fn generate_offspring_genome_test(
     breakpoints: &[Breakpoint],
     offspring_mutations: &mut Vec<usize>,
 ) -> MutationRange {
-    println!("{new_mutations:?}");
     let (mut current_genome, mut other_genome) = genomes;
     let start = offspring_mutations.len();
     if breakpoints.is_empty() {
@@ -755,10 +754,6 @@ mod test_create_offspring_genome {
             &breakpoints,
             &mut offspring_genomes,
         );
-        println!(
-            "{:?} + {:?}, {:?}",
-            parent1_genome.mutations, new_mutations, range
-        );
         let naive_output = naive(
             (parent1_genome, parent2_genome),
             &mutations,
@@ -768,7 +763,16 @@ mod test_create_offspring_genome {
         assert!(naive_output
             .windows(2)
             .all(|w| mutations[w[0]].position() <= mutations[w[1]].position()),);
-        assert_eq!(naive_output.len(), offspring_genomes.len());
+        assert_eq!(
+            naive_output.len(),
+            offspring_genomes.len(),
+            "[{:?}, {:?}] + {:?} = {:?} and {:?}",
+            parent1_genome.mutations,
+            parent2_genome.mutations,
+            new_mutations,
+            naive_output,
+            offspring_genomes,
+        );
         for i in &offspring_genomes {
             assert_eq!(naive_output.iter().filter(|&j| j == i).count(), 1);
         }

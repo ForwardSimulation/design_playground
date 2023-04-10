@@ -290,6 +290,10 @@ fn generate_offspring_genome_test(
             &mut current_genome,
         );
     } else {
+        println!(
+            "genome1 = {:?}, genome2 = {:?}",
+            current_genome, other_genome
+        );
         let mut mut_index = 0_usize;
         for b in breakpoints {
             println!("mut index = {}", mut_index);
@@ -307,13 +311,18 @@ fn generate_offspring_genome_test(
                     _ => unimplemented!("unhandled Breakpoint variant"),
                 })
                 .inspect(|k| {
-                    println!("k = {:?}", k);
-                    current_genome.current_mutation_index += current_genome
-                        .mutations
+                    current_genome.current_mutation_index += current_genome.mutations
+                        [current_genome.current_mutation_index..]
                         .iter()
                         .take_while(|gk| mutations[**gk].position() < mutations[**k].position())
                         .inspect(|gk| offspring_mutations.push(**gk))
                         .count();
+                    println!(
+                        "k = {:?}, pos = {:?}, current_genome_index = {}",
+                        k,
+                        mutations[**k].position(),
+                        current_genome.current_mutation_index
+                    );
                     offspring_mutations.push(**k);
                 })
                 .count();

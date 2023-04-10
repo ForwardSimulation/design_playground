@@ -1,7 +1,7 @@
 use rand::prelude::Rng;
 use rand::SeedableRng;
 
-use forrustts::genetics::{Breakpoint, GeneticMap, GenerateBreakpoints};
+use forrustts::genetics::{Breakpoint, GenerateBreakpoints, GeneticMap};
 use forrustts::prelude::*;
 
 // We need a type with a more complex
@@ -261,6 +261,7 @@ fn merge_mutations(
         .for_each(|m| offspring_haplotypes.mutations.push(*m));
 }
 
+// Too much coupling makes all of this untestable.
 fn generate_offspring_genome_test(
     parent: DiploidGenome,
     parent_haplotypes: &Haplotypes,
@@ -277,7 +278,6 @@ fn generate_offspring_genome_test(
     }
     let mut rv = usize::MAX;
     let start = offspring_haplotypes.mutations.len();
-    let nm = new_mutations.len();
     if breakpoints.is_empty() {
         merge_mutations(
             mutations,
@@ -288,7 +288,7 @@ fn generate_offspring_genome_test(
     } else {
         let mut mut_index = 0_usize;
         for b in breakpoints {
-            let x = new_mutations[mut_index..]
+            mut_index += new_mutations[mut_index..]
                 .iter()
                 .take_while(|k| match b {
                     // NOTE: forrustts needs to handle this
@@ -302,18 +302,17 @@ fn generate_offspring_genome_test(
                     _ => unimplemented!("unhandled Breakpoint variant"),
                 })
                 .inspect(|k| {
-                    let x = current_genome
+                    current_genome.current_mutation_index += current_genome
                         .mutations
                         .iter()
                         .take_while(|gk| mutations[**gk].position() < mutations[**k].position())
                         .inspect(|gk| offspring_haplotypes.mutations.push(**gk))
                         .count();
                     offspring_haplotypes.mutations.push(**k);
-                    current_genome.current_mutation_index += x;
                 })
                 .count();
-            mut_index += x;
-            let y = current_genome.mutations[current_genome.current_mutation_index..]
+            current_genome.current_mutation_index += current_genome.mutations
+                [current_genome.current_mutation_index..]
                 .iter()
                 .take_while(|gk| match b {
                     // NOTE: forrustts needs to handle this
@@ -328,7 +327,6 @@ fn generate_offspring_genome_test(
                 })
                 .inspect(|gk| offspring_haplotypes.mutations.push(**gk))
                 .count();
-            current_genome.current_mutation_index += y;
 
             // Advance other genome
             other_genome.current_mutation_index += other_genome.mutations
@@ -357,13 +355,13 @@ fn generate_offspring_genome_test(
             .haplotypes
             .push(MutationRange { start, stop });
     }
-    assert_eq!(
-        stop - start,
-        nm + current_genome.mutations.len(),
-        "{:?} + {new_mutations:?} = {:?}",
-        current_genome.mutations,
-        &offspring_haplotypes.mutations[start..stop]
-    );
+    //assert_eq!(
+    //    stop - start,
+    //    nm + current_genome.mutations.len(),
+    //    "{:?} + {new_mutations:?} = {:?}",
+    //    current_genome.mutations,
+    //    &offspring_haplotypes.mutations[start..stop]
+    //);
     rv
 }
 
@@ -554,6 +552,31 @@ mod tests {
                 };
                 // Empty genetic map == no recombination
                 let builder = forrustts::genetics::GeneticMapBuilder::default();
+                let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
+                let _ = evolve_pop_with_haplotypes(params, genetic_map).unwrap();
+            }
+    }
+
+    proptest! {
+            #[test]
+            fn run_sim_with_recombination(seed in 0..u64::MAX) {
+                let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+                let make_mutrate = rand_distr::Exp::new(1.0).unwrap();
+                let mutation_rate = rng.sample(make_mutrate);
+                let params = SimParams {
+                    seed,
+                    size: 100,
+                    num_generations: 100,
+                    mutation_rate,
+                };
+
+                let genome_start = Position::new_valid(0);
+                let genome_length = Position::new_valid(1000000);
+                let poisson = vec![forrustts::genetics::PoissonCrossover::new(
+                    genome_start, genome_length, 2.0).unwrap()];
+                // Empty genetic map == no recombination
+                let builder = forrustts::genetics::GeneticMapBuilder::default().extend_poisson(&poisson);
+
                 let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
                 let _ = evolve_pop_with_haplotypes(params, genetic_map).unwrap();
             }

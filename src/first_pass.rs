@@ -734,7 +734,7 @@ mod test_create_offspring_genome {
         let mut kept_breakpoints = vec![];
         for b in breakpoints.iter() {
             let x = breakpoints.iter().filter(|&i| b == i).count();
-            if x % 2 == 0 {
+            if x % 2 != 0 {
                 kept_breakpoints.push(*b);
             }
         }
@@ -743,6 +743,10 @@ mod test_create_offspring_genome {
         let mut output = vec![];
 
         for b in kept_breakpoints.iter() {
+            println!(
+                "genome1 = {:?},genome2= {:?}",
+                parent1_genome, parent2_genome
+            );
             let pos = match b {
                 Breakpoint::Crossover(x) => x,
                 Breakpoint::IndependentAssortment(x) => x,
@@ -755,7 +759,15 @@ mod test_create_offspring_genome {
                 .for_each(|a| output.push(*a));
             lastpos = *pos;
             std::mem::swap(&mut parent1_genome, &mut parent2_genome);
+            println!(
+                "after swap: genome1 = {:?},genome2= {:?}",
+                parent1_genome, parent2_genome
+            );
         }
+        println!(
+            "genome1 = {:?},genome2= {:?}",
+            parent1_genome, parent2_genome
+        );
         parent1_genome
             .mutations
             .iter()

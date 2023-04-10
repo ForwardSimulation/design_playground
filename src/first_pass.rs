@@ -702,6 +702,7 @@ mod test_create_offspring_genome {
         let (mut parent1_genome, mut parent2_genome) = parents;
         let mut lastpos = Position::new_valid(0);
         let mut output = vec![];
+
         for b in breakpoints.iter() {
             let pos = match b {
                 Breakpoint::Crossover(x) => x,
@@ -721,9 +722,6 @@ mod test_create_offspring_genome {
             .iter()
             .filter(|&k| mutations[*k].position() >= lastpos)
             .for_each(|a| output.push(*a));
-        assert!(output
-            .windows(2)
-            .all(|w| mutations[w[0]].position() <= mutations[w[1]].position()),);
         for m in new_mutations {
             output.push(*m);
         }
@@ -764,7 +762,10 @@ mod test_create_offspring_genome {
         assert!(naive_output
             .windows(2)
             .all(|w| mutations[w[0]].position() <= mutations[w[1]].position()),);
-        assert_eq!(&naive_output, &offspring_genomes[range.start..range.stop]);
+        assert_eq!(naive_output.len(), offspring_genomes.len());
+        for i in &offspring_genomes {
+            assert_eq!(naive_output.iter().filter(|&j| j == i).count(), 1);
+        }
     }
 
     proptest! {

@@ -605,7 +605,7 @@ mod tests {
 #[cfg(test)]
 mod test_create_offspring_genome {
     use super::*;
-    use proptest::{option::of, prelude::*};
+    use proptest::prelude::*;
 
     fn setup(
         seed: u64,

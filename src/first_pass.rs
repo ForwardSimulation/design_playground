@@ -644,12 +644,18 @@ mod test_create_offspring_genome {
             mutations.push(m);
         }
 
+        let mut breakpoints = vec![];
+        for _ in 0..nbreakpoints {
+            let position = rng.sample(makepos);
+            breakpoints.push(Breakpoint::Crossover(position));
+        }
+
         new_mutations.sort_by(|i, j| mutations[*i].position().cmp(&mutations[*j].position()));
         haploid_genomes[0..nmuts1]
             .sort_by(|i, j| mutations[*i].position().cmp(&mutations[*j].position()));
         haploid_genomes[nmuts1..]
             .sort_by(|i, j| mutations[*i].position().cmp(&mutations[*j].position()));
-        (mutations, haploid_genomes, new_mutations, vec![])
+        (mutations, haploid_genomes, new_mutations, breakpoints)
     }
 
     fn setup_parents(
@@ -777,6 +783,17 @@ mod test_create_offspring_genome {
                                     )
         {
             run(seed, nmuts1, nmuts2, num_new_mutations, 0);
+        }
+
+        #[test]
+        fn test_with_breakpoints(seed in 0..u64::MAX,
+                                    nmuts1 in 0..=50_usize,
+                                    nmuts2 in 0..=50_usize,
+                                    num_new_mutations in 0..50_usize,
+                                    nbreakpints in 0..10_usize
+                                    )
+        {
+            run(seed, nmuts1, nmuts2, num_new_mutations, nbreakpints);
         }
     }
 

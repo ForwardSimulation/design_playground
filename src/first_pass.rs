@@ -258,7 +258,6 @@ fn merge_mutations(
     offspring_haplotypes: &mut Vec<usize>,
     current_genome: &mut ParentalGenome,
 ) {
-    println!("{:?}", current_genome);
     for m in new_mutations.iter() {
         let n = current_genome.mutations[current_genome.current_mutation_index..]
             .iter()
@@ -293,11 +292,6 @@ fn generate_offspring_genome_test(
     } else {
         let mut mut_index = 0_usize;
         for b in breakpoints {
-            println!(
-                "genome1 = {:?}, genome2 = {:?}",
-                current_genome, other_genome
-            );
-            println!("mut index = {}", mut_index);
             mut_index += new_mutations[mut_index..]
                 .iter()
                 .take_while(|k| match b {
@@ -318,23 +312,9 @@ fn generate_offspring_genome_test(
                         .take_while(|gk| mutations[**gk].position() < mutations[**k].position())
                         .inspect(|gk| offspring_mutations.push(**gk))
                         .count();
-                    println!(
-                        "k = {:?}, pos = {:?}, current_genome_index = {}",
-                        k,
-                        mutations[**k].position(),
-                        current_genome.current_mutation_index
-                    );
                     offspring_mutations.push(**k);
                 })
                 .count();
-            println!("mut index = {}", mut_index);
-            println!(
-                "{} {}, {} {}",
-                current_genome.mutations.len(),
-                current_genome.current_mutation_index,
-                other_genome.mutations.len(),
-                other_genome.current_mutation_index
-            );
             current_genome.current_mutation_index += current_genome.mutations
                 [current_genome.current_mutation_index..]
                 .iter()
@@ -371,14 +351,6 @@ fn generate_offspring_genome_test(
 
             std::mem::swap(&mut current_genome, &mut other_genome);
         }
-        println!("mut index = {}", mut_index);
-        println!(
-            "{} {}, {} {}",
-            current_genome.mutations.len(),
-            current_genome.current_mutation_index,
-            other_genome.mutations.len(),
-            other_genome.current_mutation_index
-        );
         merge_mutations(
             mutations,
             &new_mutations[mut_index..],
@@ -744,10 +716,6 @@ mod test_create_offspring_genome {
         let mut output = vec![];
 
         for b in kept_breakpoints.iter() {
-            println!(
-                "genome1 = {:?},genome2= {:?}",
-                parent1_genome, parent2_genome
-            );
             let pos = match b {
                 Breakpoint::Crossover(x) => x,
                 Breakpoint::IndependentAssortment(x) => x,
@@ -760,15 +728,7 @@ mod test_create_offspring_genome {
                 .for_each(|a| output.push(*a));
             lastpos = *pos;
             std::mem::swap(&mut parent1_genome, &mut parent2_genome);
-            println!(
-                "after swap: genome1 = {:?},genome2= {:?}",
-                parent1_genome, parent2_genome
-            );
         }
-        println!(
-            "genome1 = {:?},genome2= {:?}",
-            parent1_genome, parent2_genome
-        );
         parent1_genome
             .mutations
             .iter()
@@ -853,7 +813,7 @@ mod test_create_offspring_genome {
                                     nmuts1 in 0..=50_usize,
                                     nmuts2 in 0..=50_usize,
                                     num_new_mutations in 0..50_usize,
-                                    nbreakpoints in 0..10_usize
+                                    nbreakpoints in 0..25_usize
                                     )
         {
             run(seed, nmuts1, nmuts2, num_new_mutations, nbreakpoints);

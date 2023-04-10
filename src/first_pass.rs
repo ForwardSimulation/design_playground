@@ -292,6 +292,7 @@ fn generate_offspring_genome_test(
     } else {
         let mut mut_index = 0_usize;
         for b in breakpoints {
+            println!("mut index = {}", mut_index);
             mut_index += new_mutations[mut_index..]
                 .iter()
                 .take_while(|k| match b {
@@ -315,22 +316,30 @@ fn generate_offspring_genome_test(
                     offspring_mutations.push(**k);
                 })
                 .count();
-            current_genome.current_mutation_index += current_genome.mutations
-                [current_genome.current_mutation_index..]
-                .iter()
-                .take_while(|gk| match b {
-                    // NOTE: forrustts needs to handle this
-                    // comparison with trat impls
-                    forrustts::genetics::Breakpoint::Crossover(pos) => {
-                        mutations[**gk].position() < *pos
-                    }
-                    forrustts::genetics::Breakpoint::IndependentAssortment(pos) => {
-                        mutations[**gk].position() < *pos
-                    }
-                    _ => unimplemented!("unhandled Breakpoint variant"),
-                })
-                .inspect(|gk| offspring_mutations.push(**gk))
-                .count();
+            println!("mut index = {}", mut_index);
+            println!(
+                "{} {}, {} {}",
+                current_genome.mutations.len(),
+                current_genome.current_mutation_index,
+                other_genome.mutations.len(),
+                other_genome.current_mutation_index
+            );
+            //current_genome.current_mutation_index += current_genome.mutations
+            //    [current_genome.current_mutation_index..]
+            //    .iter()
+            //    .take_while(|gk| match b {
+            //        // NOTE: forrustts needs to handle this
+            //        // comparison with trat impls
+            //        forrustts::genetics::Breakpoint::Crossover(pos) => {
+            //            mutations[**gk].position() < *pos
+            //        }
+            //        forrustts::genetics::Breakpoint::IndependentAssortment(pos) => {
+            //            mutations[**gk].position() < *pos
+            //        }
+            //        _ => unimplemented!("unhandled Breakpoint variant"),
+            //    })
+            //    .inspect(|gk| offspring_mutations.push(**gk))
+            //    .count();
 
             // Advance other genome
             other_genome.current_mutation_index += other_genome.mutations
@@ -351,12 +360,20 @@ fn generate_offspring_genome_test(
 
             std::mem::swap(&mut current_genome, &mut other_genome);
         }
-        merge_mutations(
-            mutations,
-            &new_mutations[mut_index..],
-            offspring_mutations,
-            &mut current_genome,
-        )
+        println!("mut index = {}", mut_index);
+        println!(
+            "{} {}, {} {}",
+            current_genome.mutations.len(),
+            current_genome.current_mutation_index,
+            other_genome.mutations.len(),
+            other_genome.current_mutation_index
+        );
+        //merge_mutations(
+        //    mutations,
+        //    &new_mutations[mut_index..],
+        //    offspring_mutations,
+        //    &mut current_genome,
+        //)
     }
     let stop = offspring_mutations.len();
     MutationRange { start, stop }
@@ -605,7 +622,7 @@ mod tests {
 #[cfg(test)]
 mod test_create_offspring_genome {
     use super::*;
-    use proptest::prelude::*;
+    use proptest::{prelude::*, option::of};
 
     fn setup(
         seed: u64,
@@ -769,13 +786,15 @@ mod test_create_offspring_genome {
         assert!(naive_output
             .windows(2)
             .all(|w| mutations[w[0]].position() <= mutations[w[1]].position()),);
+        assert_eq!(range.stop, offspring_genomes.len());
         assert_eq!(
             naive_output.len(),
             offspring_genomes.len(),
-            "[{:?}, {:?}] + {:?} = {:?} and {:?}",
+            "[{:?}, {:?}] + {:?} & {:?} = {:?} and {:?}",
             parent1_genome.mutations,
             parent2_genome.mutations,
             new_mutations,
+            breakpoints,
             naive_output,
             offspring_genomes,
         );

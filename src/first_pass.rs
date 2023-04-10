@@ -688,7 +688,6 @@ mod test_create_offspring_genome {
 
     fn naive(
         parents: (ParentalGenome, ParentalGenome),
-        haploid_genomes: &[usize],
         mutations: &[Mutation],
         breakpoints: &[Breakpoint],
         new_mutations: &[usize],
@@ -722,12 +721,12 @@ mod test_create_offspring_genome {
             .iter()
             .filter(|&k| mutations[*k].position() >= lastpos)
             .for_each(|a| output.push(*a));
-        for m in new_mutations {
-            output.push(*m);
-        }
         assert!(output
             .windows(2)
             .all(|w| mutations[w[0]].position() <= mutations[w[1]].position()),);
+        for m in new_mutations {
+            output.push(*m);
+        }
         output.sort_by(|i, j| mutations[*i].position().cmp(&mutations[*j].position()));
         output
     }
@@ -758,7 +757,6 @@ mod test_create_offspring_genome {
         );
         let naive_output = naive(
             (parent1_genome, parent2_genome),
-            &haploid_genomes,
             &mutations,
             &breakpoints,
             &new_mutations,
@@ -782,8 +780,17 @@ mod test_create_offspring_genome {
     }
 
     #[test]
-    fn failing_test_0() {
+    fn proptest_regression_0() {
         run(0, 0, 0, 1, 0);
+    }
+
+    #[test]
+    fn proptest_regression_1() {
+        let seed = 3958894411756207915_u64;
+        let nmuts1 = 28;
+        let nmuts2 = 32;
+        let num_new_mutations = 30;
+        run(seed, nmuts1, nmuts2, num_new_mutations, 0);
     }
 }
 

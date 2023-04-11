@@ -150,33 +150,12 @@ impl DiploidPopWithHaplotypes {
 
     #[inline(never)]
     pub fn count_mutations(&mut self) {
-        let mut result = 0;
-        for chunk in self.mutation_counts.chunks_exact_mut(4) {
-            for i in chunk {
-                *i = 0;
-                result += 1;
-            }
-        }
-        for i in &mut self.mutation_counts[result..] {
-            *i = 0;
-        }
-        //self.mutation_counts.fill(0);
+        self.mutation_counts.fill(0);
         self.mutation_counts.resize(self.mutations.len(), 0);
-        result = 0;
-        for chunk in self.haplotypes.mutations.chunks_exact(2) {
-            for i in chunk {
-                self.mutation_counts[*i] += 1;
-                result += 1;
-            }
-        }
-        for i in &self.haplotypes.mutations[result..] {
-            self.mutation_counts[*i] += 1;
-        }
-
-        //self.haplotypes
-        //    .mutations
-        //    .iter()
-        //    .for_each(|m| self.mutation_counts[*m] += 1);
+        self.haplotypes
+            .mutations
+            .iter()
+            .for_each(|m| self.mutation_counts[*m] += 1);
     }
 
     #[inline(never)]

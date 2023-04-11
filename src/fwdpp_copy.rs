@@ -49,6 +49,25 @@ impl DiploidPopulation {
         }
     }
 
+    #[inline(never)]
+    fn mutation_recycling(&self) -> Vec<usize> {
+        self.mutation_counts
+            .iter()
+            .enumerate()
+            .filter_map(|(index, value)| if value == &0 { Some(index) } else { None })
+            .collect::<Vec<usize>>()
+    }
+
+    fn count_mutations(&mut self) {
+        self.mutation_counts.fill(0);
+        self.mutation_counts.resize(self.mutations.len(), 0);
+        for g in &self.haplotypes {
+            for m in &g.mutations {
+                self.mutation_counts[*m] += g.count;
+            }
+        }
+    }
+
     pub fn num_segregating_mutations(&self) -> u32 {
         todo!("oops, still need this");
     }
@@ -172,6 +191,7 @@ pub fn evolve_pop_with_haplotypes(
     for generation in 0..params.num_generations {
         let mut offspring: Vec<DiploidGenome> = vec![];
         let mut genome_queue = make_haploid_genome_queue(&pop.haplotypes);
+        let mut queue = pop.mutation_recycling();
         for _ in 0..params.num_individuals {
             // Pick two parents
             let parent1 = rng.sample(parent_picker);
@@ -185,7 +205,7 @@ pub fn evolve_pop_with_haplotypes(
                 generation,
                 num_mutations,
                 position_generator,
-                &mut vec![],
+                &mut queue,
                 &mut pop.mutations,
                 &mut rng,
             );
@@ -211,7 +231,7 @@ pub fn evolve_pop_with_haplotypes(
                 generation,
                 num_mutations,
                 position_generator,
-                &mut vec![],
+                &mut queue,
                 &mut pop.mutations,
                 &mut rng,
             );
@@ -230,6 +250,7 @@ pub fn evolve_pop_with_haplotypes(
             offspring.push(DiploidGenome { first, second });
         }
         std::mem::swap(&mut pop.individuals, &mut offspring);
+        pop.count_mutations();
         offspring.clear();
     }
     Some(pop)

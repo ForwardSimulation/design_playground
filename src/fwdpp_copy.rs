@@ -88,6 +88,20 @@ impl DiploidPopulation {
         }
         sum
     }
+
+    pub fn num_extant_genomes(&self) -> u32 {
+        let mut rv = 0;
+        for g in &self.haplotypes {
+            if g.count > 0 {
+                rv += 1;
+            }
+        }
+        rv
+    }
+
+    pub fn total_num_genomes(&self) -> usize {
+        self.haplotypes.len()
+    }
 }
 
 #[inline(never)]

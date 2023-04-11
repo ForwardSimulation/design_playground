@@ -13,8 +13,10 @@ fn main() {
     let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
     let pop = evolve_pop_with_haplotypes(params, genetic_map).unwrap();
     println!(
-        "{} {}",
+        "{} {} {} {}",
         pop.num_segregating_mutations(),
-        pop.sum_extant_genome_sizes()
+        pop.sum_extant_genome_sizes(),
+        pop.num_extant_genomes(),
+        pop.total_num_genomes()
     );
 }

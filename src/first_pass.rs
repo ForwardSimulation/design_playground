@@ -174,13 +174,13 @@ impl DiploidPopWithHaplotypes {
 pub struct SimParams {
     #[arg(short, long)]
     pub seed: u64,
-    #[arg(short, long)]
-    pub size: u32,
-    #[arg(short, long)]
+    #[arg(long = "popsize", short = 'p')]
+    pub num_individuals: u32,
+    #[arg(short, long = "ngens")]
     pub num_generations: u32,
-    #[arg(short, long)]
+    #[arg(short, long = "mu")]
     pub mutation_rate: f64,
-    #[arg(short, long)]
+    #[arg(short, long = "r")]
     pub recrate: f64,
 }
 
@@ -391,10 +391,11 @@ pub fn evolve_pop_with_haplotypes(
     genetic_map: GeneticMap,
 ) -> Option<DiploidPopWithHaplotypes> {
     let params = params.validate()?;
-    let mut pop = DiploidPopWithHaplotypes::new(params.size)?;
+    let mut pop = DiploidPopWithHaplotypes::new(params.num_individuals)?;
 
     let mut rng = rand::rngs::StdRng::seed_from_u64(params.seed);
-    let parent_picker = rand::distributions::Uniform::<usize>::new(0, params.size as usize);
+    let parent_picker =
+        rand::distributions::Uniform::<usize>::new(0, params.num_individuals as usize);
     let num_mutations = rand_distr::Poisson::<f64>::new(params.mutation_rate).ok()?;
     let position_generator = rand::distributions::Uniform::<Position>::new(
         Position::new_valid(0),
@@ -410,7 +411,7 @@ pub fn evolve_pop_with_haplotypes(
     for generation in 0..params.num_generations {
         offspring_haplotypes.mutations.reserve(1000);
         let mut queue = pop.mutation_recycling();
-        for _ in 0..params.size {
+        for _ in 0..params.num_individuals {
             // Pick two parents
             let parent1 = rng.sample(parent_picker);
             let parent2 = rng.sample(parent_picker);
@@ -510,7 +511,7 @@ mod tests {
             let mutation_rate = rng.sample(make_mutrate);
             let params = SimParams {
                 seed,
-                size: 100,
+                num_individuals: 100,
                 num_generations: 100,
                 mutation_rate,
                 recrate: 0.0,
@@ -531,7 +532,7 @@ mod tests {
             let mutation_rate = rng.sample(make_mutrate);
             let params = SimParams {
                 seed,
-                size: 100,
+                num_individuals: 100,
                 num_generations: 100,
                 mutation_rate,
                 recrate: 0.0,

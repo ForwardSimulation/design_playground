@@ -191,6 +191,10 @@ pub fn evolve_pop_with_haplotypes(
     for generation in 0..params.num_generations {
         let mut offspring: Vec<DiploidGenome> = vec![];
         let mut genome_queue = make_haploid_genome_queue(&pop.haplotypes);
+        for g in &mut pop.haplotypes {
+            g.count = 0;
+        }
+        println!("{}", genome_queue.len());
         let mut queue = pop.mutation_recycling();
         for _ in 0..params.num_individuals {
             // Pick two parents
@@ -222,11 +226,12 @@ pub fn evolve_pop_with_haplotypes(
                 2 * params.num_individuals,
                 &mut genome_queue,
             );
+            assert!(pop.haplotypes[first].count > 0);
 
             let (genome1, genome2) =
                 get_mendelized_parent_genome_indexes(&pop.individuals, parent2, u01, &mut rng);
 
-            // Mutations for offspring genome 1
+            // Mutations for offspring genome 2
             let mutations = generate_mutations(
                 generation,
                 num_mutations,
@@ -247,10 +252,22 @@ pub fn evolve_pop_with_haplotypes(
                 2 * params.num_individuals,
                 &mut genome_queue,
             );
+            assert!(pop.haplotypes[second].count > 0);
             offspring.push(DiploidGenome { first, second });
         }
         std::mem::swap(&mut pop.individuals, &mut offspring);
+        for i in &pop.individuals {
+            assert!(pop.haplotypes[i.first].count > 0);
+            assert!(pop.haplotypes[i.second].count > 0);
+        }
         pop.count_mutations();
+        println!(
+            "{} {} | {} {}",
+            pop.haplotypes.len(),
+            pop.haplotypes.capacity(),
+            pop.mutations.len(),
+            pop.mutations.capacity()
+        );
         offspring.clear();
     }
     Some(pop)

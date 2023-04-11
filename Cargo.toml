@@ -16,6 +16,3 @@ proptest = "1.1.0"
 
 [profile.release]
 debug = 1
-
-[rust]
-debuginfo-level = 1

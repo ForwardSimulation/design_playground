@@ -147,7 +147,14 @@ fn update_genomes(
                 }
             }
         };
+    // FIXME: this is super hack-ish:
+    // We need to avoid making a fake genome
+    // for the case where the genome is being recycled.
     if let Some(mut genome) = update {
+        if output_genome_index < pop.haplotypes.len() {
+            std::mem::swap(&mut pop.haplotypes[output_genome_index], &mut genome);
+            genome.mutations.clear();
+        }
         let genomes = (
             get_parental_genome(&pop.haplotypes, genome1),
             get_parental_genome(&pop.haplotypes, genome2),

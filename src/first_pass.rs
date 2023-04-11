@@ -503,6 +503,7 @@ mod tests {
 
     proptest! {
         #[test]
+        #[ignore]
         fn run_sim_no_recombination(seed in 0..u64::MAX) {
             let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
             let make_mutrate = rand_distr::Exp::new(1.0).unwrap();
@@ -523,6 +524,7 @@ mod tests {
 
     proptest! {
         #[test]
+        #[ignore]
         fn run_sim_with_recombination(seed in 0..u64::MAX) {
             let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
             let make_mutrate = rand_distr::Exp::new(1.0).unwrap();

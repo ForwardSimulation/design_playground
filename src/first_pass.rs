@@ -231,6 +231,8 @@ fn generate_mutations(
 #[inline(never)]
 fn merge_mutations(
     mutations: &[Mutation],
+    mutation_counts: &[u32],
+    current_total_size: u32,
     new_mutations: &[usize],
     offspring_haplotypes: &mut Vec<usize>,
     current_genome: &mut ParentalGenome,
@@ -239,13 +241,20 @@ fn merge_mutations(
         let n = current_genome.mutations[current_genome.current_mutation_index..]
             .iter()
             .take_while(|mutation| mutations[**mutation].position() < mutations[*m].position())
-            .inspect(|x| offspring_haplotypes.push(**x))
+            .inspect(|x| {
+                if mutation_counts[**x] < current_total_size {
+                    offspring_haplotypes.push(**x);
+                }
+            })
             .count();
         offspring_haplotypes.push(*m);
         current_genome.current_mutation_index += n;
     }
-    offspring_haplotypes
-        .extend_from_slice(&current_genome.mutations[current_genome.current_mutation_index..]);
+    for m in &current_genome.mutations[current_genome.current_mutation_index..] {
+        if mutation_counts[*m] < current_total_size {
+            offspring_haplotypes.push(*m);
+        }
+    }
 }
 
 // This has had a lot of refactoring and still
@@ -254,6 +263,8 @@ fn merge_mutations(
 fn generate_offspring_genome(
     genomes: (ParentalGenome, ParentalGenome),
     mutations: &[Mutation],
+    mutation_counts: &[u32],
+    current_total_size: u32,
     new_mutations: Vec<usize>,
     breakpoints: &[Breakpoint],
     offspring_mutations: &mut Vec<usize>,
@@ -277,7 +288,11 @@ fn generate_offspring_genome(
                     [current_genome.current_mutation_index..]
                     .iter()
                     .take_while(|gk| mutations[**gk].position() < mutations[**k].position())
-                    .inspect(|gk| offspring_mutations.push(**gk))
+                    .inspect(|gk| {
+                        if mutation_counts[**gk] < current_total_size {
+                            offspring_mutations.push(**gk);
+                        }
+                    })
                     .count();
                 offspring_mutations.push(**k);
             })
@@ -286,7 +301,11 @@ fn generate_offspring_genome(
             [current_genome.current_mutation_index..]
             .iter()
             .take_while(|gk| mutations[**gk].position() < bpos)
-            .inspect(|gk| offspring_mutations.push(**gk))
+            .inspect(|gk| {
+                if mutation_counts[**gk] < current_total_size {
+                    offspring_mutations.push(**gk);
+                }
+            })
             .count();
 
         // Advance other genome
@@ -300,6 +319,8 @@ fn generate_offspring_genome(
     }
     merge_mutations(
         mutations,
+        mutation_counts,
+        current_total_size,
         &new_mutations[mut_index..],
         offspring_mutations,
         &mut current_genome,
@@ -418,6 +439,8 @@ pub fn evolve_pop_with_haplotypes(
             );
 
             genetic_map.generate_breakpoints(&mut rng);
+            pop.mutation_counts
+                .resize(pop.mutation_counts.len() + mutations.len(), 0);
 
             let genomes = get_parental_genomes(&pop.haplotypes, pop.individuals[parent1]);
             let genomes = if rng.sample(u01) < 0.5 {
@@ -428,6 +451,8 @@ pub fn evolve_pop_with_haplotypes(
             let range = generate_offspring_genome(
                 genomes,
                 &pop.mutations,
+                &pop.mutation_counts,
+                2 * params.num_individuals,
                 mutations,
                 genetic_map.breakpoints(),
                 &mut offspring_haplotypes.mutations,
@@ -444,6 +469,8 @@ pub fn evolve_pop_with_haplotypes(
             );
 
             genetic_map.generate_breakpoints(&mut rng);
+            pop.mutation_counts
+                .resize(pop.mutation_counts.len() + mutations.len(), 0);
 
             let genomes = get_parental_genomes(&pop.haplotypes, pop.individuals[parent2]);
             let genomes = if rng.sample(u01) < 0.5 {
@@ -454,6 +481,8 @@ pub fn evolve_pop_with_haplotypes(
             let range = generate_offspring_genome(
                 genomes,
                 &pop.mutations,
+                &pop.mutation_counts,
+                2 * params.num_individuals,
                 mutations,
                 genetic_map.breakpoints(),
                 &mut offspring_haplotypes.mutations,
@@ -704,9 +733,12 @@ mod test_create_offspring_genome {
             .windows(2)
             .all(|w| mutations[w[0]].position() <= mutations[w[1]].position()),);
         let mut offspring_genomes = Vec::<usize>::new();
+        let mutation_counts = vec![0_u32; new_mutations.len()];
         let range = generate_offspring_genome(
             (parent1_genome, parent2_genome),
             &mutations,
+            &mutation_counts,
+            u32::MAX,
             new_mutations.clone(),
             &breakpoints,
             &mut offspring_genomes,

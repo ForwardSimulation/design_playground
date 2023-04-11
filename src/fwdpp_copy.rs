@@ -109,6 +109,7 @@ fn get_mendelized_parent_genome_indexes(
     }
 }
 
+#[inline(never)]
 fn update_genomes(
     genomes: (usize, usize),
     mutations: Vec<usize>,

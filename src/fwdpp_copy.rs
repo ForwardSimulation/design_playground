@@ -57,6 +57,7 @@ impl DiploidPopulation {
             .collect::<Vec<usize>>()
     }
 
+    #[inline(never)]
     fn count_mutations(&mut self) {
         self.mutation_counts.fill(0);
         self.mutation_counts.resize(self.mutations.len(), 0);

@@ -4,6 +4,7 @@ use rand::prelude::SeedableRng;
 use crate::common::generate_mutations;
 use crate::common::DiploidGenome;
 use crate::common::Mutation;
+use crate::common::ParentalGenome;
 use crate::SimParams;
 
 use forrustts::genetics::GenerateBreakpoints;
@@ -16,6 +17,7 @@ struct HaploidGenome {
     count: u32,
 }
 
+// The borrow checker is not gonna like this...
 pub struct DiploidPopulation {
     haplotypes: Vec<HaploidGenome>,
     individuals: Vec<DiploidGenome>,
@@ -44,6 +46,29 @@ impl DiploidPopulation {
             mutation_counts: vec![],
         }
     }
+
+    pub fn num_segregating_mutations(&self) -> u32 {
+        todo!("oops, still need this");
+    }
+}
+
+fn get_parental_genome(genomes: &[HaploidGenome], genome: usize) -> ParentalGenome {
+    ParentalGenome {
+        mutations: &genomes[genome].mutations,
+        current_mutation_index: 0,
+        genome,
+    }
+}
+
+fn get_parental_genomes<'a>(
+    parents: &'a [DiploidGenome],
+    genomes: &'a [HaploidGenome],
+    parent: usize,
+) -> (ParentalGenome<'a>, ParentalGenome<'a>) {
+    (
+        get_parental_genome(genomes, parents[parent].first),
+        get_parental_genome(genomes, parents[parent].second),
+    )
 }
 
 #[inline(never)]
@@ -68,10 +93,18 @@ pub fn evolve_pop_with_haplotypes(
 
     //let mut parent_haplotype_map = vec![];
     for generation in 0..params.num_generations {
+        let mut offspring: Vec<DiploidGenome> = vec![];
         for _ in 0..params.num_individuals {
             // Pick two parents
             let parent1 = rng.sample(parent_picker);
             let parent2 = rng.sample(parent_picker);
+
+            let genomes = get_parental_genomes(&pop.individuals, &pop.haplotypes, parent1);
+            let genomes = if rng.sample(u01) < 0.5 {
+                genomes
+            } else {
+                (genomes.1, genomes.0)
+            };
 
             // Mutations for offspring genome 1
             let mutations = generate_mutations(
@@ -84,6 +117,11 @@ pub fn evolve_pop_with_haplotypes(
             );
 
             genetic_map.generate_breakpoints(&mut rng);
+            if mutations.is_empty() && genetic_map.breakpoints().is_empty() {
+                unimplemented!("simply pass on first parent genome");
+            } else {
+                unimplemented!("get a new genome and call our lib fn to populate it");
+            }
         }
     }
     Some(pop)

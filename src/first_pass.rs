@@ -150,12 +150,33 @@ impl DiploidPopWithHaplotypes {
 
     #[inline(never)]
     pub fn count_mutations(&mut self) {
-        self.mutation_counts.fill(0);
+        let mut result = 0;
+        for chunk in self.mutation_counts.chunks_exact_mut(4) {
+            for i in chunk {
+                *i = 0;
+                result += 1;
+            }
+        }
+        for i in &mut self.mutation_counts[result..] {
+            *i = 0;
+        }
+        //self.mutation_counts.fill(0);
         self.mutation_counts.resize(self.mutations.len(), 0);
-        self.haplotypes
-            .mutations
-            .iter()
-            .for_each(|m| self.mutation_counts[*m] += 1);
+        result = 0;
+        for chunk in self.haplotypes.mutations.chunks_exact(2) {
+            for i in chunk {
+                self.mutation_counts[*i] += 1;
+                result += 1;
+            }
+        }
+        for i in &self.haplotypes.mutations[result..] {
+            self.mutation_counts[*i] += 1;
+        }
+
+        //self.haplotypes
+        //    .mutations
+        //    .iter()
+        //    .for_each(|m| self.mutation_counts[*m] += 1);
     }
 
     #[inline(never)]
@@ -405,9 +426,10 @@ pub fn evolve_pop_with_haplotypes(
     let mut genetic_map = genetic_map;
 
     //let mut parent_haplotype_map = vec![];
+    let mut offspring_haplotypes = Haplotypes::default();
+    let mut offspring = vec![];
     for generation in 0..params.num_generations {
-        let mut offspring_haplotypes = Haplotypes::default();
-        let mut offspring = vec![];
+        offspring_haplotypes.mutations.reserve(1000);
         let mut queue = pop.mutation_recycling();
         for _ in 0..params.size {
             // Pick two parents
@@ -468,8 +490,12 @@ pub fn evolve_pop_with_haplotypes(
             let second = offspring_haplotypes.add_range(range);
             offspring.push(DiploidGenome { first, second });
         }
-        pop.haplotypes = offspring_haplotypes;
-        pop.individuals = offspring;
+        std::mem::swap(&mut pop.haplotypes, &mut offspring_haplotypes);
+        offspring_haplotypes.haplotypes.clear();
+        offspring_haplotypes.mutations.clear();
+
+        std::mem::swap(&mut pop.individuals, &mut offspring);
+        offspring.clear();
         pop.count_mutations();
         // for h in &pop.haplotypes.haplotypes {
         //     assert!(pop.haplotypes.mutations[h.start..h.stop]

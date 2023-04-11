@@ -733,7 +733,7 @@ mod test_create_offspring_genome {
             .windows(2)
             .all(|w| mutations[w[0]].position() <= mutations[w[1]].position()),);
         let mut offspring_genomes = Vec::<usize>::new();
-        let mutation_counts = vec![0_u32; new_mutations.len()];
+        let mutation_counts = vec![0_u32; mutations.len() + new_mutations.len()];
         let range = generate_offspring_genome(
             (parent1_genome, parent2_genome),
             &mutations,

@@ -238,9 +238,10 @@ fn merge_mutations(
     current_genome: &mut ParentalGenome,
 ) {
     for m in new_mutations.iter() {
+        let mpos = mutations[*m].position();
         let n = current_genome.mutations[current_genome.current_mutation_index..]
             .iter()
-            .take_while(|mutation| mutations[**mutation].position() < mutations[*m].position())
+            .take_while(|mutation| mutations[**mutation].position() < mpos)
             .inspect(|x| {
                 if mutation_counts[**x] < current_total_size {
                     offspring_haplotypes.push(**x);
@@ -284,6 +285,8 @@ fn generate_offspring_genome(
             .iter()
             .take_while(|k| mutations[**k].position() < bpos)
             .inspect(|k| {
+                // TODO: this should be abstracted out and the k-th
+                // mutation position cached
                 current_genome.current_mutation_index += current_genome.mutations
                     [current_genome.current_mutation_index..]
                     .iter()

@@ -133,30 +133,25 @@ fn update_genomes(
     pop: &mut DiploidPopulation,
     fixation_threshold: u32,
     genome_queue: &mut Vec<usize>,
+    temporary_mutations: &mut Vec<usize>,
 ) -> usize {
     let (genome1, genome2) = genomes;
     let (output_genome_index, update) =
         if mutations.is_empty() && genetic_map.breakpoints().is_empty() {
             pop.haplotypes[genome1].count += 1;
-            (genome1, None)
+            return genome1;
         } else {
             match genome_queue.pop() {
                 Some(index) => {
                     pop.haplotypes[index].mutations.clear();
                     assert_eq!(pop.haplotypes[index].count, 0);
-                    (
-                        index,
-                        Some(HaploidGenome {
-                            mutations: vec![],
-                            count: 0,
-                        }),
-                    )
+                    (index, NewGenomeType::Recycled(index))
                 }
                 None => {
                     let rv = pop.haplotypes.len();
                     (
                         rv,
-                        Some(HaploidGenome {
+                        NewGenomeType::New(HaploidGenome {
                             mutations: vec![],
                             count: 0,
                         }),
@@ -167,31 +162,39 @@ fn update_genomes(
     // FIXME: this is super hack-ish:
     // We need to avoid making a fake genome
     // for the case where the genome is being recycled.
-    if let Some(mut genome) = update {
-        if output_genome_index < pop.haplotypes.len() {
-            std::mem::swap(&mut pop.haplotypes[output_genome_index], &mut genome);
-            genome.mutations.clear();
+    let genomes = (
+        get_parental_genome(&pop.haplotypes, genome1),
+        get_parental_genome(&pop.haplotypes, genome2),
+    );
+    match update {
+        NewGenomeType::Recycled(index) => {
+            temporary_mutations.clear();
+            generate_offspring_genome(
+                genomes,
+                &pop.mutations,
+                &pop.mutation_counts,
+                fixation_threshold,
+                mutations,
+                genetic_map.breakpoints(),
+                temporary_mutations,
+            );
+            std::mem::swap(temporary_mutations, &mut pop.haplotypes[index].mutations);
         }
-        let genomes = (
-            get_parental_genome(&pop.haplotypes, genome1),
-            get_parental_genome(&pop.haplotypes, genome2),
-        );
-        generate_offspring_genome(
-            genomes,
-            &pop.mutations,
-            &pop.mutation_counts,
-            fixation_threshold,
-            mutations,
-            genetic_map.breakpoints(),
-            &mut genome.mutations,
-        );
-        genome.count += 1;
-        if output_genome_index < pop.haplotypes.len() {
-            std::mem::swap(&mut pop.haplotypes[output_genome_index], &mut genome);
-        } else {
+        NewGenomeType::New(mut genome) => {
+            generate_offspring_genome(
+                genomes,
+                &pop.mutations,
+                &pop.mutation_counts,
+                fixation_threshold,
+                mutations,
+                genetic_map.breakpoints(),
+                &mut genome.mutations,
+            );
             pop.haplotypes.push(genome);
         }
     }
+
+    pop.haplotypes[output_genome_index].count += 1;
 
     output_genome_index
 }
@@ -218,6 +221,7 @@ pub fn evolve_pop_with_haplotypes(
 
     //let mut parent_haplotype_map = vec![];
     let mut offspring: Vec<DiploidGenome> = vec![];
+    let mut temporary_mutations = vec![];
     for generation in 0..params.num_generations {
         let mut genome_queue = make_haploid_genome_queue(&pop.haplotypes);
         for g in &mut pop.haplotypes {
@@ -254,6 +258,7 @@ pub fn evolve_pop_with_haplotypes(
                 &mut pop,
                 2 * params.num_individuals,
                 &mut genome_queue,
+                &mut temporary_mutations,
             );
             assert!(pop.haplotypes[first].count > 0);
             if nm > 0 {
@@ -288,6 +293,7 @@ pub fn evolve_pop_with_haplotypes(
                 &mut pop,
                 2 * params.num_individuals,
                 &mut genome_queue,
+                &mut temporary_mutations,
             );
             assert!(pop.haplotypes[second].count > 0);
             offspring.push(DiploidGenome { first, second });

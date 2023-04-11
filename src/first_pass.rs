@@ -2,9 +2,10 @@ use clap::Parser;
 use rand::prelude::Rng;
 use rand::SeedableRng;
 
-use forrustts::genetics::{Breakpoint, GenerateBreakpoints, GeneticMap};
+use forrustts::genetics::{GenerateBreakpoints, GeneticMap};
 use forrustts::prelude::*;
 
+use crate::common::generate_offspring_genome;
 use crate::common::generate_mutations;
 use crate::common::Mutation;
 use crate::common::MutationRange;
@@ -145,110 +146,6 @@ pub struct SimParams {
     pub mutation_rate: f64,
     #[arg(short, long = "r")]
     pub recrate: f64,
-}
-
-#[inline(never)]
-fn merge_mutations(
-    mutations: &[Mutation],
-    mutation_counts: &[u32],
-    current_total_size: u32,
-    new_mutations: &[usize],
-    offspring_haplotypes: &mut Vec<usize>,
-    current_genome: &mut ParentalGenome,
-) {
-    for m in new_mutations.iter() {
-        let mpos = mutations[*m].position();
-        let n = current_genome.mutations[current_genome.current_mutation_index..]
-            .iter()
-            .take_while(|mutation| mutations[**mutation].position() < mpos)
-            .inspect(|x| {
-                if mutation_counts[**x] < current_total_size {
-                    offspring_haplotypes.push(**x);
-                }
-            })
-            .count();
-        offspring_haplotypes.push(*m);
-        current_genome.current_mutation_index += n;
-    }
-    for m in &current_genome.mutations[current_genome.current_mutation_index..] {
-        if mutation_counts[*m] < current_total_size {
-            offspring_haplotypes.push(*m);
-        }
-    }
-}
-
-// This has had a lot of refactoring and still
-// is hard to test in isolation (see tests below).
-#[inline(never)]
-fn generate_offspring_genome(
-    genomes: (ParentalGenome, ParentalGenome),
-    mutations: &[Mutation],
-    mutation_counts: &[u32],
-    current_total_size: u32,
-    new_mutations: Vec<usize>,
-    breakpoints: &[Breakpoint],
-    offspring_mutations: &mut Vec<usize>,
-) -> MutationRange {
-    let (mut current_genome, mut other_genome) = genomes;
-    let start = offspring_mutations.len();
-    let mut mut_index = 0_usize;
-    for b in breakpoints {
-        let bpos = match b {
-            // NOTE: forrustts needs to handle this
-            // comparison with trat impls
-            forrustts::genetics::Breakpoint::Crossover(pos) => *pos,
-            forrustts::genetics::Breakpoint::IndependentAssortment(pos) => *pos,
-            _ => unimplemented!("unhandled Breakpoint variant"),
-        };
-        mut_index += new_mutations[mut_index..]
-            .iter()
-            .take_while(|k| mutations[**k].position() < bpos)
-            .inspect(|k| {
-                // TODO: this should be abstracted out and the k-th
-                // mutation position cached
-                current_genome.current_mutation_index += current_genome.mutations
-                    [current_genome.current_mutation_index..]
-                    .iter()
-                    .take_while(|gk| mutations[**gk].position() < mutations[**k].position())
-                    .inspect(|gk| {
-                        if mutation_counts[**gk] < current_total_size {
-                            offspring_mutations.push(**gk);
-                        }
-                    })
-                    .count();
-                offspring_mutations.push(**k);
-            })
-            .count();
-        current_genome.current_mutation_index += current_genome.mutations
-            [current_genome.current_mutation_index..]
-            .iter()
-            .take_while(|gk| mutations[**gk].position() < bpos)
-            .inspect(|gk| {
-                if mutation_counts[**gk] < current_total_size {
-                    offspring_mutations.push(**gk);
-                }
-            })
-            .count();
-
-        // Advance other genome
-        other_genome.current_mutation_index += other_genome.mutations
-            [other_genome.current_mutation_index..]
-            .iter()
-            .take_while(|gk| mutations[**gk].position() < bpos)
-            .count();
-
-        std::mem::swap(&mut current_genome, &mut other_genome);
-    }
-    merge_mutations(
-        mutations,
-        mutation_counts,
-        current_total_size,
-        &new_mutations[mut_index..],
-        offspring_mutations,
-        &mut current_genome,
-    );
-    let stop = offspring_mutations.len();
-    MutationRange { start, stop }
 }
 
 // fn generate_offspring_genome2(

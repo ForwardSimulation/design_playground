@@ -1,6 +1,6 @@
 use rand::prelude::Rng;
 
-use forrustts::genetics::{Breakpoint, GenerateBreakpoints, GeneticMap};
+use forrustts::genetics::Breakpoint;
 use forrustts::prelude::*;
 
 // We need a type with a more complex
@@ -122,7 +122,7 @@ fn merge_mutations(
 // This has had a lot of refactoring and still
 // is hard to test in isolation (see tests below).
 #[inline(never)]
-fn generate_offspring_genome(
+pub fn generate_offspring_genome(
     genomes: (ParentalGenome, ParentalGenome),
     mutations: &[Mutation],
     mutation_counts: &[u32],

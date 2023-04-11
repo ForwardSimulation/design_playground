@@ -118,6 +118,10 @@ impl DiploidPopWithHaplotypes {
         }
         nseg
     }
+
+    pub fn sum_extant_genome_sizes(&self) -> usize {
+        self.haplotypes.mutations.len()
+    }
 }
 
 // fn generate_offspring_genome2(

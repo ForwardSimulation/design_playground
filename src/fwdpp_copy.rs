@@ -76,6 +76,17 @@ impl DiploidPopulation {
         }
         nseg
     }
+
+    pub fn sum_extant_genome_sizes(&self) -> u32 {
+        let mut sum = 0_u32;
+        for i in &self.individuals {
+            for j in [i.first, i.second] {
+                assert!(self.haplotypes[j].count > 0);
+                sum += self.haplotypes[j].count;
+            }
+        }
+        sum
+    }
 }
 
 fn make_haploid_genome_queue(genomes: &[HaploidGenome]) -> Vec<usize> {
@@ -107,6 +118,11 @@ fn get_mendelized_parent_genome_indexes(
     } else {
         (individuals[parent].second, individuals[parent].first)
     }
+}
+
+enum NewGenomeType {
+    Recycled(usize),
+    New(HaploidGenome),
 }
 
 #[inline(never)]

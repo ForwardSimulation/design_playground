@@ -52,6 +52,16 @@ impl DiploidPopulation {
     }
 }
 
+fn make_haploid_genome_queue(genomes: &[HaploidGenome]) -> Vec<usize> {
+    let mut rv = vec![];
+    genomes.iter().enumerate().for_each(|(i, g)| {
+        if g.count == 0 {
+            rv.push(i);
+        }
+    });
+    rv
+}
+
 fn get_parental_genome(genomes: &[HaploidGenome], genome: usize) -> ParentalGenome {
     ParentalGenome {
         mutations: &genomes[genome].mutations,
@@ -94,6 +104,7 @@ pub fn evolve_pop_with_haplotypes(
     //let mut parent_haplotype_map = vec![];
     for generation in 0..params.num_generations {
         let mut offspring: Vec<DiploidGenome> = vec![];
+        let mut genome_queue = make_haploid_genome_queue(&pop.haplotypes);
         for _ in 0..params.num_individuals {
             // Pick two parents
             let parent1 = rng.sample(parent_picker);
@@ -118,7 +129,7 @@ pub fn evolve_pop_with_haplotypes(
 
             genetic_map.generate_breakpoints(&mut rng);
             if mutations.is_empty() && genetic_map.breakpoints().is_empty() {
-                unimplemented!("simply pass on first parent genome");
+                pop.haplotypes[genomes.0.genome].count += 1;
             } else {
                 unimplemented!("get a new genome and call our lib fn to populate it");
             }

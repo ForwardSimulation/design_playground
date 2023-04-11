@@ -1,4 +1,3 @@
-use forrustts::genetics::Breakpoint;
 use rand::prelude::Rng;
 use rand::prelude::SeedableRng;
 
@@ -13,7 +12,7 @@ use forrustts::genetics::GenerateBreakpoints;
 use forrustts::genetics::GeneticMap;
 use forrustts::prelude::*;
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct HaploidGenome {
     mutations: Vec<usize>,
     count: u32,
@@ -69,7 +68,13 @@ impl DiploidPopulation {
     }
 
     pub fn num_segregating_mutations(&self) -> u32 {
-        todo!("oops, still need this");
+        let mut nseg = 0;
+        for i in &self.mutation_counts {
+            if i > &0 && (*i as usize) < 2 * self.individuals.len() {
+                nseg += 1;
+            }
+        }
+        nseg
     }
 }
 
@@ -132,6 +137,8 @@ fn update_genomes(
             match genome_queue.pop() {
                 Some(index) => {
                     pop.haplotypes[index].mutations.clear();
+                    pop.haplotypes[index].count += 1;
+                    unimplemented!("we need to say to populate this genome.");
                     (index, None)
                 }
                 None => {
@@ -151,6 +158,7 @@ fn update_genomes(
             get_parental_genome(&pop.haplotypes, genome1),
             get_parental_genome(&pop.haplotypes, genome2),
         );
+        println!("{mutations:?}, {:?}, {:?}", genomes.0, genomes.1);
         generate_offspring_genome(
             genomes,
             &pop.mutations,
@@ -161,9 +169,13 @@ fn update_genomes(
             &mut genome.mutations,
         );
         genome.count += 1;
+        assert_eq!(first_genome_index, pop.haplotypes.len());
+        println!("after = {first_genome_index}, {:?}, {:?},", genome, genomes,);
         pop.haplotypes.push(genome);
+        assert_eq!(first_genome_index, pop.haplotypes.len() - 1);
     }
 
+    println!("returning {first_genome_index}");
     first_genome_index
 }
 
@@ -194,7 +206,6 @@ pub fn evolve_pop_with_haplotypes(
         for g in &mut pop.haplotypes {
             g.count = 0;
         }
-        println!("{}", genome_queue.len());
         let mut queue = pop.mutation_recycling();
         for _ in 0..params.num_individuals {
             // Pick two parents
@@ -218,15 +229,25 @@ pub fn evolve_pop_with_haplotypes(
                 .resize(pop.mutation_counts.len() + mutations.len(), 0);
 
             genetic_map.generate_breakpoints(&mut rng);
+            let nm = mutations.len();
             let first = update_genomes(
                 (genome1, genome2),
-                mutations,
+                mutations.clone(),
                 &genetic_map,
                 &mut pop,
                 2 * params.num_individuals,
                 &mut genome_queue,
             );
+            println!("got {first}");
             assert!(pop.haplotypes[first].count > 0);
+            if nm > 0 {
+                assert!(
+                    !pop.haplotypes[first].mutations.is_empty(),
+                    "{first} {:?}, {:?}",
+                    pop.haplotypes[first],
+                    mutations,
+                );
+            }
 
             let (genome1, genome2) =
                 get_mendelized_parent_genome_indexes(&pop.individuals, parent2, u01, &mut rng);
@@ -261,13 +282,13 @@ pub fn evolve_pop_with_haplotypes(
             assert!(pop.haplotypes[i.second].count > 0);
         }
         pop.count_mutations();
-        println!(
-            "{} {} | {} {}",
-            pop.haplotypes.len(),
-            pop.haplotypes.capacity(),
-            pop.mutations.len(),
-            pop.mutations.capacity()
-        );
+        //println!(
+        //    "{} {} | {} {}",
+        //    pop.haplotypes.len(),
+        //    pop.haplotypes.capacity(),
+        //    pop.mutations.len(),
+        //    pop.mutations.capacity()
+        //);
         offspring.clear();
     }
     Some(pop)

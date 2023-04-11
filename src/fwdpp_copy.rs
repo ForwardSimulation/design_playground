@@ -77,12 +77,12 @@ impl DiploidPopulation {
         nseg
     }
 
-    pub fn sum_extant_genome_sizes(&self) -> u32 {
-        let mut sum = 0_u32;
+    pub fn sum_extant_genome_sizes(&self) -> usize {
+        let mut sum = 0;
         for i in &self.individuals {
             for j in [i.first, i.second] {
                 assert!(self.haplotypes[j].count > 0);
-                sum += self.haplotypes[j].count;
+                sum += self.haplotypes[j].mutations.len();
             }
         }
         sum

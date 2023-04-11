@@ -1,7 +1,22 @@
+use clap::Parser;
 use rand::prelude::Rng;
 
 use forrustts::genetics::Breakpoint;
 use forrustts::prelude::*;
+
+#[derive(Parser, Debug)]
+pub struct SimParams {
+    #[arg(short, long)]
+    pub seed: u64,
+    #[arg(long = "popsize", short = 'p')]
+    pub num_individuals: u32,
+    #[arg(short, long = "ngens")]
+    pub num_generations: u32,
+    #[arg(short, long = "mu")]
+    pub mutation_rate: f64,
+    #[arg(short, long = "r")]
+    pub recrate: f64,
+}
 
 // We need a type with a more complex
 // layout than a simple position.
@@ -43,6 +58,21 @@ pub struct ParentalGenome<'a> {
     pub mutations: &'a [usize],
     pub current_mutation_index: usize,
     pub genome: usize,
+}
+
+// NOTE: we use usize::MAX to indicate a
+// "no genome" state. Production
+// code would do better.
+#[derive(Copy, Clone, Debug)]
+pub struct DiploidGenome {
+    pub first: usize,
+    pub second: usize,
+}
+
+impl DiploidGenome {
+    pub fn new(first: usize, second: usize) -> Self {
+        Self { first, second }
+    }
 }
 
 // NOTE: we can be smarter than this

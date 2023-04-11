@@ -4,6 +4,7 @@ use forrustts::genetics::GeneticMapBuilder;
 use forrustts::genetics::PoissonCrossover;
 
 use design_playground::first_pass::*;
+use design_playground::SimParams;
 
 fn main() {
     let params = SimParams::parse();

@@ -1,15 +1,16 @@
-use clap::Parser;
 use rand::prelude::Rng;
 use rand::SeedableRng;
 
 use forrustts::genetics::{GenerateBreakpoints, GeneticMap};
 use forrustts::prelude::*;
 
-use crate::common::generate_offspring_genome;
 use crate::common::generate_mutations;
+use crate::common::generate_offspring_genome;
+use crate::common::DiploidGenome;
 use crate::common::Mutation;
 use crate::common::MutationRange;
 use crate::common::ParentalGenome;
+use crate::common::SimParams;
 
 #[derive(Debug, Default)]
 struct Haplotypes {
@@ -57,21 +58,6 @@ fn get_parental_genomes(
         haplotypes.get_genome(parent.first),
         haplotypes.get_genome(parent.second),
     )
-}
-
-// NOTE: we use usize::MAX to indicate a
-// "no genome" state. Production
-// code would do better.
-#[derive(Copy, Clone, Debug)]
-struct DiploidGenome {
-    first: usize,
-    second: usize,
-}
-
-impl DiploidGenome {
-    pub fn new(first: usize, second: usize) -> Self {
-        Self { first, second }
-    }
 }
 
 /// When will the borrow checker hate this?
@@ -132,20 +118,6 @@ impl DiploidPopWithHaplotypes {
         }
         nseg
     }
-}
-
-#[derive(Parser, Debug)]
-pub struct SimParams {
-    #[arg(short, long)]
-    pub seed: u64,
-    #[arg(long = "popsize", short = 'p')]
-    pub num_individuals: u32,
-    #[arg(short, long = "ngens")]
-    pub num_generations: u32,
-    #[arg(short, long = "mu")]
-    pub mutation_rate: f64,
-    #[arg(short, long = "r")]
-    pub recrate: f64,
 }
 
 // fn generate_offspring_genome2(

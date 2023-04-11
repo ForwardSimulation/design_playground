@@ -1,1 +1,90 @@
+use rand::prelude::Rng;
+use rand::prelude::SeedableRng;
+
+use crate::common::generate_mutations;
+use crate::common::DiploidGenome;
 use crate::common::Mutation;
+use crate::SimParams;
+
+use forrustts::genetics::GenerateBreakpoints;
+use forrustts::genetics::GeneticMap;
+use forrustts::prelude::*;
+
+#[derive(Default)]
+struct HaploidGenome {
+    mutations: Vec<usize>,
+    count: u32,
+}
+
+pub struct DiploidPopulation {
+    haplotypes: Vec<HaploidGenome>,
+    individuals: Vec<DiploidGenome>,
+    mutations: Vec<Mutation>,
+    mutation_counts: Vec<u32>,
+}
+
+impl DiploidPopulation {
+    pub fn new(size: usize) -> Self {
+        let haplotypes = vec![HaploidGenome {
+            mutations: vec![],
+            count: 2 * (size as u32),
+        }];
+        let individuals = vec![
+            DiploidGenome {
+                first: 0,
+                second: 0
+            };
+            size
+        ];
+
+        Self {
+            haplotypes,
+            individuals,
+            mutations: vec![],
+            mutation_counts: vec![],
+        }
+    }
+}
+
+#[inline(never)]
+pub fn evolve_pop_with_haplotypes(
+    params: SimParams,
+    genetic_map: GeneticMap,
+) -> Option<DiploidPopulation> {
+    let params = params.validate()?;
+    let mut pop = DiploidPopulation::new(params.num_individuals as usize);
+
+    let mut rng = rand::rngs::StdRng::seed_from_u64(params.seed);
+    let parent_picker =
+        rand::distributions::Uniform::<usize>::new(0, params.num_individuals as usize);
+    let num_mutations = rand_distr::Poisson::<f64>::new(params.mutation_rate).ok()?;
+    let position_generator = rand::distributions::Uniform::<Position>::new(
+        Position::new_valid(0),
+        Position::new_valid(1000000),
+    );
+    let u01 = rand::distributions::Uniform::new(0., 1.);
+
+    let mut genetic_map = genetic_map;
+
+    //let mut parent_haplotype_map = vec![];
+    for generation in 0..params.num_generations {
+        for _ in 0..params.num_individuals {
+            // Pick two parents
+            let parent1 = rng.sample(parent_picker);
+            let parent2 = rng.sample(parent_picker);
+
+            // Mutations for offspring genome 1
+            let mutations = generate_mutations(
+                generation,
+                num_mutations,
+                position_generator,
+                &mut vec![],
+                &mut pop.mutations,
+                &mut rng,
+            );
+
+            genetic_map.generate_breakpoints(&mut rng);
+        }
+    }
+    Some(pop)
+}

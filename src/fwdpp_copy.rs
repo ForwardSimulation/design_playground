@@ -89,6 +89,7 @@ impl DiploidPopulation {
     }
 }
 
+#[inline(never)]
 fn make_haploid_genome_queue(genomes: &[HaploidGenome]) -> Vec<usize> {
     let mut rv = vec![];
     genomes.iter().enumerate().for_each(|(i, g)| {
@@ -99,6 +100,7 @@ fn make_haploid_genome_queue(genomes: &[HaploidGenome]) -> Vec<usize> {
     rv
 }
 
+#[inline(never)]
 fn get_parental_genome(genomes: &[HaploidGenome], genome: usize) -> ParentalGenome {
     ParentalGenome {
         mutations: &genomes[genome].mutations,
@@ -107,6 +109,7 @@ fn get_parental_genome(genomes: &[HaploidGenome], genome: usize) -> ParentalGeno
     }
 }
 
+#[inline(never)]
 fn get_mendelized_parent_genome_indexes(
     individuals: &[DiploidGenome],
     parent: usize,

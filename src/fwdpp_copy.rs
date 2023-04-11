@@ -1,7 +1,9 @@
+use forrustts::genetics::Breakpoint;
 use rand::prelude::Rng;
 use rand::prelude::SeedableRng;
 
 use crate::common::generate_mutations;
+use crate::common::generate_offspring_genome;
 use crate::common::DiploidGenome;
 use crate::common::Mutation;
 use crate::common::ParentalGenome;
@@ -81,6 +83,71 @@ fn get_parental_genomes<'a>(
     )
 }
 
+fn get_mendelized_parent_genome_indexes(
+    individuals: &[DiploidGenome],
+    parent: usize,
+    u01: rand::distributions::Uniform<f64>,
+    rng: &mut rand::rngs::StdRng,
+) -> (usize, usize) {
+    if rng.sample(u01) < 0.5 {
+        (individuals[parent].first, individuals[parent].second)
+    } else {
+        (individuals[parent].second, individuals[parent].first)
+    }
+}
+
+fn update_genomes(
+    genomes: (usize, usize),
+    mutations: Vec<usize>,
+    genetic_map: &GeneticMap,
+    pop: &mut DiploidPopulation,
+    fixation_threshold: u32,
+    genome_queue: &mut Vec<usize>,
+) -> usize {
+    let (genome1, genome2) = genomes;
+    let (first_genome_index, update) =
+        if mutations.is_empty() && genetic_map.breakpoints().is_empty() {
+            pop.haplotypes[genome1].count += 1;
+            (genome1, None)
+        } else {
+            match genome_queue.pop() {
+                Some(index) => {
+                    pop.haplotypes[index].mutations.clear();
+                    (index, None)
+                }
+                None => {
+                    let rv = pop.haplotypes.len();
+                    (
+                        rv,
+                        Some(HaploidGenome {
+                            mutations: vec![],
+                            count: 0,
+                        }),
+                    )
+                }
+            }
+        };
+    if let Some(mut genome) = update {
+        let genomes = (
+            get_parental_genome(&pop.haplotypes, genome1),
+            get_parental_genome(&pop.haplotypes, genome2),
+        );
+        generate_offspring_genome(
+            genomes,
+            &pop.mutations,
+            &pop.mutation_counts,
+            fixation_threshold,
+            mutations,
+            genetic_map.breakpoints(),
+            &mut genome.mutations,
+        );
+        genome.count += 1;
+        pop.haplotypes.push(genome);
+    }
+
+    first_genome_index
+}
+
 #[inline(never)]
 pub fn evolve_pop_with_haplotypes(
     params: SimParams,
@@ -110,12 +177,8 @@ pub fn evolve_pop_with_haplotypes(
             let parent1 = rng.sample(parent_picker);
             let parent2 = rng.sample(parent_picker);
 
-            let genomes = get_parental_genomes(&pop.individuals, &pop.haplotypes, parent1);
-            let genomes = if rng.sample(u01) < 0.5 {
-                genomes
-            } else {
-                (genomes.1, genomes.0)
-            };
+            let (genome1, genome2) =
+                get_mendelized_parent_genome_indexes(&pop.individuals, parent1, u01, &mut rng);
 
             // Mutations for offspring genome 1
             let mutations = generate_mutations(
@@ -127,13 +190,47 @@ pub fn evolve_pop_with_haplotypes(
                 &mut rng,
             );
 
+            pop.mutation_counts
+                .resize(pop.mutation_counts.len() + mutations.len(), 0);
+
             genetic_map.generate_breakpoints(&mut rng);
-            if mutations.is_empty() && genetic_map.breakpoints().is_empty() {
-                pop.haplotypes[genomes.0.genome].count += 1;
-            } else {
-                unimplemented!("get a new genome and call our lib fn to populate it");
-            }
+            let first = update_genomes(
+                (genome1, genome2),
+                mutations,
+                &genetic_map,
+                &mut pop,
+                2 * params.num_individuals,
+                &mut genome_queue,
+            );
+
+            let (genome1, genome2) =
+                get_mendelized_parent_genome_indexes(&pop.individuals, parent2, u01, &mut rng);
+
+            // Mutations for offspring genome 1
+            let mutations = generate_mutations(
+                generation,
+                num_mutations,
+                position_generator,
+                &mut vec![],
+                &mut pop.mutations,
+                &mut rng,
+            );
+            pop.mutation_counts
+                .resize(pop.mutation_counts.len() + mutations.len(), 0);
+
+            genetic_map.generate_breakpoints(&mut rng);
+            let second = update_genomes(
+                (genome1, genome2),
+                mutations,
+                &genetic_map,
+                &mut pop,
+                2 * params.num_individuals,
+                &mut genome_queue,
+            );
+            offspring.push(DiploidGenome { first, second });
         }
+        std::mem::swap(&mut pop.individuals, &mut offspring);
+        offspring.clear();
     }
     Some(pop)
 }

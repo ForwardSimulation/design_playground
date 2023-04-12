@@ -61,13 +61,21 @@ impl DiploidPopulation {
     fn count_mutations(&mut self) {
         self.mutation_counts.fill(0);
         self.mutation_counts.resize(self.mutations.len(), 0);
-        for g in &self.haplotypes {
-            if g.count > 0 {
-                for m in &g.mutations {
-                    self.mutation_counts[*m] += g.count;
-                }
-            }
-        }
+        self.haplotypes
+            .iter_mut()
+            .filter(|g| g.count > 0)
+            .for_each(|g| {
+                g.mutations
+                    .iter()
+                    .for_each(|m| self.mutation_counts[*m] += g.count)
+            });
+        //for g in &self.haplotypes {
+        //    if g.count > 0 {
+        //        for m in &g.mutations {
+        //            self.mutation_counts[*m] += g.count;
+        //        }
+        //    }
+        //}
     }
 
     pub fn num_segregating_mutations(&self) -> u32 {

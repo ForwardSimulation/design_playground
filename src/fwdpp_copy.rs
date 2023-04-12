@@ -3,6 +3,7 @@ use rand::prelude::SeedableRng;
 
 use crate::common::generate_mutations;
 use crate::common::generate_offspring_genome;
+use crate::common::set_fixation_counts_to_zero;
 use crate::common::DiploidGenome;
 use crate::common::Mutation;
 use crate::common::ParentalGenome;
@@ -154,12 +155,28 @@ enum NewGenomeType {
 }
 
 #[inline(never)]
+fn remove_fixations_from_extant_genomes(
+    twon: u32,
+    mutation_counts: &[u32],
+    genomes: &mut [HaploidGenome],
+) -> bool {
+    if mutation_counts.iter().any(|c| *c == twon) {
+        genomes
+            .iter_mut()
+            .filter(|g| g.count > 0)
+            .for_each(|g| g.mutations.retain(|k| mutation_counts[*k] < twon));
+        true
+    } else {
+        false
+    }
+}
+
+#[inline(never)]
 fn update_genomes(
     genomes: (usize, usize),
     mutations: Vec<usize>,
     genetic_map: &GeneticMap,
     pop: &mut DiploidPopulation,
-    fixation_threshold: u32,
     genome_queue: &mut Vec<usize>,
     temporary_mutations: &mut Vec<usize>,
 ) -> usize {
@@ -200,8 +217,6 @@ fn update_genomes(
             generate_offspring_genome(
                 genomes,
                 &pop.mutations,
-                &pop.mutation_counts,
-                fixation_threshold,
                 mutations,
                 genetic_map.breakpoints(),
                 temporary_mutations,
@@ -212,8 +227,6 @@ fn update_genomes(
             generate_offspring_genome(
                 genomes,
                 &pop.mutations,
-                &pop.mutation_counts,
-                fixation_threshold,
                 mutations,
                 genetic_map.breakpoints(),
                 &mut genome.mutations,
@@ -284,7 +297,6 @@ pub fn evolve_pop_with_haplotypes(
                 mutations,
                 &genetic_map,
                 &mut pop,
-                2 * params.num_individuals,
                 &mut genome_queue,
                 &mut temporary_mutations,
             );
@@ -319,7 +331,6 @@ pub fn evolve_pop_with_haplotypes(
                 mutations,
                 &genetic_map,
                 &mut pop,
-                2 * params.num_individuals,
                 &mut genome_queue,
                 &mut temporary_mutations,
             );
@@ -332,6 +343,13 @@ pub fn evolve_pop_with_haplotypes(
         //    assert!(pop.haplotypes[i.second].count > 0);
         //}
         pop.count_mutations();
+        if remove_fixations_from_extant_genomes(
+            2 * params.num_individuals,
+            &pop.mutation_counts,
+            &mut pop.haplotypes,
+        ) {
+            set_fixation_counts_to_zero(2 * params.num_individuals, &mut pop.mutation_counts);
+        }
         offspring.clear();
     }
     Some(pop)

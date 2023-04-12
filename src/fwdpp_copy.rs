@@ -62,8 +62,10 @@ impl DiploidPopulation {
         self.mutation_counts.fill(0);
         self.mutation_counts.resize(self.mutations.len(), 0);
         for g in &self.haplotypes {
-            for m in &g.mutations {
-                self.mutation_counts[*m] += g.count;
+            if g.count > 0 {
+                for m in &g.mutations {
+                    self.mutation_counts[*m] += g.count;
+                }
             }
         }
     }

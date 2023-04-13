@@ -119,34 +119,49 @@ pub fn generate_mutations(
     rv
 }
 
+fn get_partition_index(genome: &[usize], mutations: &[Mutation], position: Position) -> usize {
+    genome.partition_point(|k| mutations[*k].position() < position)
+}
+
+fn extend_from_slice(
+    genome: &[usize],
+    mutations: &[Mutation],
+    position: Position,
+    offspring_haplotypes: &mut Vec<usize>,
+) -> usize {
+    let n = get_partition_index(genome, mutations, position);
+    offspring_haplotypes.extend_from_slice(&genome[..n]);
+    n
+}
+
+fn update_genome(
+    mutations: &[Mutation],
+    position: Position,
+    parent_genome: &mut ParentalGenome,
+    offspring_haplotypes: &mut Vec<usize>,
+) {
+    parent_genome.current_mutation_index += extend_from_slice(
+        &parent_genome.mutations[parent_genome.current_mutation_index..],
+        mutations,
+        position,
+        offspring_haplotypes,
+    )
+}
+
 #[inline(never)]
 fn merge_mutations(
     mutations: &[Mutation],
-    mutation_counts: &[u32],
-    current_total_size: u32,
     new_mutations: &[usize],
     offspring_haplotypes: &mut Vec<usize>,
     current_genome: &mut ParentalGenome,
 ) {
     for m in new_mutations.iter() {
         let mpos = mutations[*m].position();
-        let n = current_genome.mutations[current_genome.current_mutation_index..]
-            .iter()
-            .take_while(|mutation| mutations[**mutation].position() < mpos)
-            .inspect(|x| {
-                if mutation_counts[**x] < current_total_size {
-                    offspring_haplotypes.push(**x);
-                }
-            })
-            .count();
+        update_genome(mutations, mpos, current_genome, offspring_haplotypes);
         offspring_haplotypes.push(*m);
-        current_genome.current_mutation_index += n;
     }
-    for m in &current_genome.mutations[current_genome.current_mutation_index..] {
-        if mutation_counts[*m] < current_total_size {
-            offspring_haplotypes.push(*m);
-        }
-    }
+    offspring_haplotypes
+        .extend_from_slice(&current_genome.mutations[current_genome.current_mutation_index..]);
 }
 
 // This has had a lot of refactoring and still
@@ -155,8 +170,6 @@ fn merge_mutations(
 pub fn generate_offspring_genome(
     genomes: (ParentalGenome, ParentalGenome),
     mutations: &[Mutation],
-    mutation_counts: &[u32],
-    current_total_size: u32,
     new_mutations: Vec<usize>,
     breakpoints: &[Breakpoint],
     offspring_mutations: &mut Vec<usize>,
@@ -176,51 +189,38 @@ pub fn generate_offspring_genome(
             .iter()
             .take_while(|k| mutations[**k].position() < bpos)
             .inspect(|k| {
-                // TODO: this should be abstracted out and the k-th
-                // mutation position cached
-                current_genome.current_mutation_index += current_genome.mutations
-                    [current_genome.current_mutation_index..]
-                    .iter()
-                    .take_while(|gk| mutations[**gk].position() < mutations[**k].position())
-                    .inspect(|gk| {
-                        if mutation_counts[**gk] < current_total_size {
-                            offspring_mutations.push(**gk);
-                        }
-                    })
-                    .count();
+                let mpos = mutations[**k].position();
+                update_genome(mutations, mpos, &mut current_genome, offspring_mutations);
                 offspring_mutations.push(**k);
             })
             .count();
-        current_genome.current_mutation_index += current_genome.mutations
-            [current_genome.current_mutation_index..]
-            .iter()
-            .take_while(|gk| mutations[**gk].position() < bpos)
-            .inspect(|gk| {
-                if mutation_counts[**gk] < current_total_size {
-                    offspring_mutations.push(**gk);
-                }
-            })
-            .count();
+        update_genome(mutations, bpos, &mut current_genome, offspring_mutations);
 
         // Advance other genome
-        other_genome.current_mutation_index += other_genome.mutations
-            [other_genome.current_mutation_index..]
-            .iter()
-            .take_while(|gk| mutations[**gk].position() < bpos)
-            .count();
+        other_genome.current_mutation_index += get_partition_index(
+            &other_genome.mutations[other_genome.current_mutation_index..],
+            mutations,
+            bpos,
+        );
 
         std::mem::swap(&mut current_genome, &mut other_genome);
     }
     merge_mutations(
         mutations,
-        mutation_counts,
-        current_total_size,
         &new_mutations[mut_index..],
         offspring_mutations,
         &mut current_genome,
     );
     let stop = offspring_mutations.len();
     MutationRange { start, stop }
+}
+
+#[inline(never)]
+pub fn set_fixation_counts_to_zero(twon: u32, mutation_counts: &mut [u32]) {
+    mutation_counts
+        .iter_mut()
+        .filter(|m| **m == twon)
+        .for_each(|m| *m = 0);
 }
 
 #[cfg(test)]
@@ -378,12 +378,9 @@ mod test_create_offspring_genome {
             .windows(2)
             .all(|w| mutations[w[0]].position() <= mutations[w[1]].position()),);
         let mut offspring_genomes = Vec::<usize>::new();
-        let mutation_counts = vec![0_u32; mutations.len() + new_mutations.len()];
         let range = generate_offspring_genome(
             (parent1_genome, parent2_genome),
             &mutations,
-            &mutation_counts,
-            u32::MAX,
             new_mutations.clone(),
             &breakpoints,
             &mut offspring_genomes,

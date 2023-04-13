@@ -6,6 +6,7 @@ use forrustts::prelude::*;
 
 use crate::common::generate_mutations;
 use crate::common::generate_offspring_genome;
+use crate::common::set_fixation_counts_to_zero;
 use crate::common::DiploidGenome;
 use crate::common::Mutation;
 use crate::common::MutationRange;
@@ -190,6 +191,44 @@ impl SimParams {
     }
 }
 
+// This normally wouldn't be pub,
+// but should be unit tested anyways.
+#[inline(never)]
+fn fixation_removal_check(mutation_counts: &[u32], twon: u32, output: &mut Haplotypes) -> bool {
+    if mutation_counts.iter().any(|m| *m == twon) {
+        let x = output.mutations.len();
+        output.mutations.retain(|m| mutation_counts[*m] < twon);
+        let delta = x - output.mutations.len();
+        assert_eq!(delta % output.haplotypes.len(), 0);
+
+        let delta_per_genome = delta / output.haplotypes.len();
+        assert_eq!(
+            delta_per_genome,
+            mutation_counts.iter().filter(|m| **m == twon).count()
+        );
+
+        // NOTE: could be SIMD later
+        output.haplotypes.iter_mut().enumerate().for_each(|(i, h)| {
+            let c = h.start;
+            h.start -= i * delta_per_genome;
+            if i > 0 {
+                assert!(c > h.start);
+            }
+            assert!(h.start < output.mutations.len());
+            h.stop -= (i + 1) * delta_per_genome;
+            assert!(h.stop >= h.start);
+            assert!(
+                h.stop <= output.mutations.len(),
+                "{h:?} {}",
+                output.mutations.len()
+            );
+        });
+        true
+    } else {
+        false
+    }
+}
+
 // A proper implementation
 // would be generic over "generating mutations"
 #[inline(never)]
@@ -246,8 +285,6 @@ pub fn evolve_pop_with_haplotypes(
             let range = generate_offspring_genome(
                 genomes,
                 &pop.mutations,
-                &pop.mutation_counts,
-                2 * params.num_individuals,
                 mutations,
                 genetic_map.breakpoints(),
                 &mut offspring_haplotypes.mutations,
@@ -276,8 +313,6 @@ pub fn evolve_pop_with_haplotypes(
             let range = generate_offspring_genome(
                 genomes,
                 &pop.mutations,
-                &pop.mutation_counts,
-                2 * params.num_individuals,
                 mutations,
                 genetic_map.breakpoints(),
                 &mut offspring_haplotypes.mutations,
@@ -292,6 +327,14 @@ pub fn evolve_pop_with_haplotypes(
         std::mem::swap(&mut pop.individuals, &mut offspring);
         offspring.clear();
         pop.count_mutations();
+
+        if fixation_removal_check(
+            &pop.mutation_counts,
+            2 * params.num_individuals,
+            &mut pop.haplotypes,
+        ) {
+            set_fixation_counts_to_zero(2 * params.num_individuals, &mut pop.mutation_counts);
+        };
         // for h in &pop.haplotypes.haplotypes {
         //     assert!(pop.haplotypes.mutations[h.start..h.stop]
         //         .windows(2)

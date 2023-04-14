@@ -62,14 +62,14 @@ fn get_parental_genomes(
 }
 
 /// When will the borrow checker hate this?
-pub struct DiploidPopWithHaplotypes {
+pub struct DiploidPopulation {
     haplotypes: Haplotypes,
     individuals: Vec<DiploidGenome>,
     mutations: Vec<Mutation>,
     mutation_counts: Vec<u32>,
 }
 
-impl DiploidPopWithHaplotypes {
+impl DiploidPopulation {
     pub fn new(size: u32) -> Option<Self> {
         if size > 0 {
             let haplotypes = Haplotypes::default();
@@ -235,9 +235,9 @@ fn fixation_removal_check(mutation_counts: &[u32], twon: u32, output: &mut Haplo
 pub fn evolve_pop_with_haplotypes(
     params: SimParams,
     genetic_map: GeneticMap,
-) -> Option<DiploidPopWithHaplotypes> {
+) -> Option<DiploidPopulation> {
     let params = params.validate()?;
-    let mut pop = DiploidPopWithHaplotypes::new(params.num_individuals)?;
+    let mut pop = DiploidPopulation::new(params.num_individuals)?;
 
     let mut rng = rand::rngs::StdRng::seed_from_u64(params.seed);
     let parent_picker =

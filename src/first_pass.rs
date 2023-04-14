@@ -14,15 +14,15 @@ use crate::common::ParentalGenome;
 use crate::common::SimParams;
 
 #[derive(Debug, Default)]
-struct Haplotypes {
-    haplotypes: Vec<MutationRange>,
+struct HaploidGenomes {
+    genomes: Vec<MutationRange>,
     mutations: Vec<u32>,
 }
 
-impl Haplotypes {
+impl HaploidGenomes {
     fn get_genome(&self, genome: usize) -> ParentalGenome {
         if genome != usize::MAX {
-            let index_range = self.haplotypes[genome];
+            let index_range = self.genomes[genome];
             let mutations = &self.mutations[index_range.start..index_range.stop];
             ParentalGenome {
                 mutations,
@@ -42,17 +42,17 @@ impl Haplotypes {
         if range.start == range.stop {
             usize::MAX
         } else {
-            let rv = self.haplotypes.len();
-            self.haplotypes.push(range);
+            let rv = self.genomes.len();
+            self.genomes.push(range);
             rv
         }
     }
 }
 
 // Implementation is specific to "diploid",
-// so not an associated fn of Haplotypes
+// so not an associated fn of HaploidGenomes
 fn get_parental_genomes(
-    haplotypes: &Haplotypes,
+    haplotypes: &HaploidGenomes,
     parent: DiploidGenome,
 ) -> (ParentalGenome, ParentalGenome) {
     (
@@ -63,7 +63,7 @@ fn get_parental_genomes(
 
 /// When will the borrow checker hate this?
 pub struct DiploidPopulation {
-    haplotypes: Haplotypes,
+    haplotypes: HaploidGenomes,
     individuals: Vec<DiploidGenome>,
     mutations: Vec<Mutation>,
     mutation_counts: Vec<u32>,
@@ -72,7 +72,7 @@ pub struct DiploidPopulation {
 impl DiploidPopulation {
     pub fn new(size: u32) -> Option<Self> {
         if size > 0 {
-            let haplotypes = Haplotypes::default();
+            let haplotypes = HaploidGenomes::default();
 
             // Now, everyone starts with a single "empty"
             // genome
@@ -194,23 +194,23 @@ impl SimParams {
 // This normally wouldn't be pub,
 // but should be unit tested anyways.
 #[inline(never)]
-fn fixation_removal_check(mutation_counts: &[u32], twon: u32, output: &mut Haplotypes) -> bool {
+fn fixation_removal_check(mutation_counts: &[u32], twon: u32, output: &mut HaploidGenomes) -> bool {
     if mutation_counts.iter().any(|m| *m == twon) {
         let x = output.mutations.len();
         output
             .mutations
             .retain(|m| mutation_counts[*m as usize] < twon);
         let delta = x - output.mutations.len();
-        assert_eq!(delta % output.haplotypes.len(), 0);
+        assert_eq!(delta % output.genomes.len(), 0);
 
-        let delta_per_genome = delta / output.haplotypes.len();
+        let delta_per_genome = delta / output.genomes.len();
         assert_eq!(
             delta_per_genome,
             mutation_counts.iter().filter(|m| **m == twon).count()
         );
 
         // NOTE: could be SIMD later
-        output.haplotypes.iter_mut().enumerate().for_each(|(i, h)| {
+        output.genomes.iter_mut().enumerate().for_each(|(i, h)| {
             let c = h.start;
             h.start -= i * delta_per_genome;
             if i > 0 {
@@ -254,7 +254,7 @@ pub fn evolve_pop_with_haplotypes(
     let mut genetic_map = genetic_map;
 
     //let mut parent_haplotype_map = vec![];
-    let mut offspring_haplotypes = Haplotypes::default();
+    let mut offspring_haplotypes = HaploidGenomes::default();
     let mut offspring = vec![];
     for generation in 0..params.num_generations {
         offspring_haplotypes.mutations.reserve(1000);
@@ -323,7 +323,7 @@ pub fn evolve_pop_with_haplotypes(
             offspring.push(DiploidGenome { first, second });
         }
         std::mem::swap(&mut pop.haplotypes, &mut offspring_haplotypes);
-        offspring_haplotypes.haplotypes.clear();
+        offspring_haplotypes.genomes.clear();
         offspring_haplotypes.mutations.clear();
 
         std::mem::swap(&mut pop.individuals, &mut offspring);

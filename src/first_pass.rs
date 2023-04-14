@@ -16,7 +16,7 @@ use crate::common::SimParams;
 #[derive(Debug, Default)]
 struct Haplotypes {
     haplotypes: Vec<MutationRange>,
-    mutations: Vec<usize>,
+    mutations: Vec<u32>,
 }
 
 impl Haplotypes {
@@ -106,7 +106,7 @@ impl DiploidPopulation {
         self.haplotypes
             .mutations
             .iter()
-            .for_each(|m| self.mutation_counts[*m] += 1);
+            .for_each(|m| self.mutation_counts[*m as usize] += 1);
     }
 
     #[inline(never)]
@@ -197,7 +197,9 @@ impl SimParams {
 fn fixation_removal_check(mutation_counts: &[u32], twon: u32, output: &mut Haplotypes) -> bool {
     if mutation_counts.iter().any(|m| *m == twon) {
         let x = output.mutations.len();
-        output.mutations.retain(|m| mutation_counts[*m] < twon);
+        output
+            .mutations
+            .retain(|m| mutation_counts[*m as usize] < twon);
         let delta = x - output.mutations.len();
         assert_eq!(delta % output.haplotypes.len(), 0);
 

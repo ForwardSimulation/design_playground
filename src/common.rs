@@ -55,7 +55,7 @@ pub struct MutationRange {
 
 #[derive(Copy, Clone, Debug)]
 pub struct ParentalGenome<'a> {
-    pub mutations: &'a [usize],
+    pub mutations: &'a [u32],
     pub current_mutation_index: usize,
     pub genome: usize,
 }
@@ -87,7 +87,7 @@ pub fn generate_mutations(
     queue: &mut Vec<usize>,
     mutations: &mut Vec<Mutation>,
     rng: &mut rand::rngs::StdRng,
-) -> Vec<usize> {
+) -> Vec<u32> {
     let mut rv = vec![];
 
     // Dangerous if mean is very large,
@@ -104,33 +104,37 @@ pub fn generate_mutations(
         match queue.pop() {
             Some(index) => {
                 mutations[index] = mutation;
-                rv.push(index);
+                rv.push(index as u32);
             }
             None => {
-                rv.push(mutations.len());
+                rv.push(mutations.len() as u32);
                 mutations.push(mutation);
             }
         };
     }
 
     // sort our new mutations by (increasing) position
-    rv.sort_by(|i, j| mutations[*i].position().cmp(&mutations[*j].position()));
+    rv.sort_by(|i, j| {
+        mutations[*i as usize]
+            .position()
+            .cmp(&mutations[*j as usize].position())
+    });
 
     rv
 }
 
-fn get_partition_index(genome: &[usize], mutations: &[Mutation], position: Position) -> usize {
-    genome.partition_point(|k| mutations[*k].position() < position)
+fn get_partition_index(genome: &[u32], mutations: &[Mutation], position: Position) -> usize {
+    genome.partition_point(|k| mutations[*k as usize].position() < position)
 }
 
 fn extend_from_slice(
-    genome: &[usize],
+    genome: &[u32],
     mutations: &[Mutation],
     position: Position,
-    offspring_haplotypes: &mut Vec<usize>,
+    offspring_haplotypes: &mut Vec<u32>,
 ) -> usize {
     let n = get_partition_index(genome, mutations, position);
-    offspring_haplotypes.extend_from_slice(&genome[..n]);
+    offspring_haplotypes.extend_from_slice(&genome[..(n as usize)]);
     n
 }
 
@@ -138,7 +142,7 @@ fn update_genome(
     mutations: &[Mutation],
     position: Position,
     parent_genome: &mut ParentalGenome,
-    offspring_haplotypes: &mut Vec<usize>,
+    offspring_haplotypes: &mut Vec<u32>,
 ) {
     parent_genome.current_mutation_index += extend_from_slice(
         &parent_genome.mutations[parent_genome.current_mutation_index..],
@@ -151,12 +155,12 @@ fn update_genome(
 #[inline(never)]
 fn merge_mutations(
     mutations: &[Mutation],
-    new_mutations: &[usize],
-    offspring_haplotypes: &mut Vec<usize>,
+    new_mutations: &[u32],
+    offspring_haplotypes: &mut Vec<u32>,
     current_genome: &mut ParentalGenome,
 ) {
     for m in new_mutations.iter() {
-        let mpos = mutations[*m].position();
+        let mpos = mutations[*m as usize].position();
         update_genome(mutations, mpos, current_genome, offspring_haplotypes);
         offspring_haplotypes.push(*m);
     }
@@ -170,9 +174,9 @@ fn merge_mutations(
 pub fn generate_offspring_genome(
     genomes: (ParentalGenome, ParentalGenome),
     mutations: &[Mutation],
-    new_mutations: Vec<usize>,
+    new_mutations: Vec<u32>,
     breakpoints: &[Breakpoint],
-    offspring_mutations: &mut Vec<usize>,
+    offspring_mutations: &mut Vec<u32>,
 ) -> MutationRange {
     let (mut current_genome, mut other_genome) = genomes;
     let start = offspring_mutations.len();
@@ -187,9 +191,9 @@ pub fn generate_offspring_genome(
         };
         mut_index += new_mutations[mut_index..]
             .iter()
-            .take_while(|k| mutations[**k].position() < bpos)
+            .take_while(|k| mutations[**k as usize].position() < bpos)
             .inspect(|k| {
-                let mpos = mutations[**k].position();
+                let mpos = mutations[**k as usize].position();
                 update_genome(mutations, mpos, &mut current_genome, offspring_mutations);
                 offspring_mutations.push(**k);
             })
@@ -237,8 +241,8 @@ mod test_create_offspring_genome {
         nbreakpoints: usize,
     ) -> (
         Vec<Mutation>,
-        Vec<usize>,
-        Vec<usize>,
+        Vec<u32>,
+        Vec<u32>,
         Vec<forrustts::genetics::Breakpoint>,
     ) {
         let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
@@ -251,7 +255,7 @@ mod test_create_offspring_genome {
         for _ in 0..(nmuts1 + nmuts2) {
             let position = rng.sample(makepos);
             let m = Mutation::new(position, vec![0.1], 0.into());
-            haploid_genomes.push(mutations.len());
+            haploid_genomes.push(mutations.len() as u32);
             mutations.push(m);
         }
 
@@ -259,7 +263,7 @@ mod test_create_offspring_genome {
         for _ in 0..(num_new_mutations) {
             let position = rng.sample(makepos);
             let m = Mutation::new(position, vec![0.1], 0.into());
-            new_mutations.push(mutations.len());
+            new_mutations.push(mutations.len() as u32);
             mutations.push(m);
         }
 
@@ -269,19 +273,29 @@ mod test_create_offspring_genome {
             breakpoints.push(Breakpoint::Crossover(position));
         }
 
-        new_mutations.sort_by(|i, j| mutations[*i].position().cmp(&mutations[*j].position()));
+        new_mutations.sort_by(|i, j| {
+            mutations[*i as usize]
+                .position()
+                .cmp(&mutations[*j as usize].position())
+        });
         breakpoints.sort();
-        haploid_genomes[0..nmuts1]
-            .sort_by(|i, j| mutations[*i].position().cmp(&mutations[*j].position()));
-        haploid_genomes[nmuts1..]
-            .sort_by(|i, j| mutations[*i].position().cmp(&mutations[*j].position()));
+        haploid_genomes[0..nmuts1].sort_by(|i, j| {
+            mutations[*i as usize]
+                .position()
+                .cmp(&mutations[*j as usize].position())
+        });
+        haploid_genomes[nmuts1..].sort_by(|i, j| {
+            mutations[*i as usize]
+                .position()
+                .cmp(&mutations[*j as usize].position())
+        });
         (mutations, haploid_genomes, new_mutations, breakpoints)
     }
 
     fn setup_parents(
         nmuts1: usize,
         nmuts2: usize,
-        haploid_genomes: &[usize],
+        haploid_genomes: &[u32],
     ) -> (ParentalGenome, ParentalGenome) {
         let parent1_genome = if nmuts1 > 0 {
             ParentalGenome {
@@ -316,8 +330,8 @@ mod test_create_offspring_genome {
         parents: (ParentalGenome, ParentalGenome),
         mutations: &[Mutation],
         breakpoints: &[Breakpoint],
-        new_mutations: &[usize],
-    ) -> Vec<usize> {
+        new_mutations: &[u32],
+    ) -> Vec<u32> {
         let mut kept_breakpoints = vec![];
         for b in breakpoints.iter() {
             let x = breakpoints.iter().filter(|&i| b == i).count();
@@ -338,7 +352,10 @@ mod test_create_offspring_genome {
             parent1_genome
                 .mutations
                 .iter()
-                .filter(|&k| mutations[*k].position() >= lastpos && mutations[*k].position() < *pos)
+                .filter(|&k| {
+                    mutations[*k as usize].position() >= lastpos
+                        && mutations[*k as usize].position() < *pos
+                })
                 .for_each(|a| output.push(*a));
             lastpos = *pos;
             std::mem::swap(&mut parent1_genome, &mut parent2_genome);
@@ -346,20 +363,24 @@ mod test_create_offspring_genome {
         parent1_genome
             .mutations
             .iter()
-            .filter(|&k| mutations[*k].position() >= lastpos)
+            .filter(|&k| mutations[*k as usize].position() >= lastpos)
             .for_each(|a| output.push(*a));
         for m in new_mutations {
             output.push(*m);
         }
-        output.sort_by(|i, j| mutations[*i].position().cmp(&mutations[*j].position()));
+        output.sort_by(|i, j| {
+            mutations[*i as usize]
+                .position()
+                .cmp(&mutations[*j as usize].position())
+        });
         output
     }
 
-    fn keys_to_positions(mutations: &[Mutation], keys: &[usize]) -> Vec<i64> {
+    fn keys_to_positions(mutations: &[Mutation], keys: &[u32]) -> Vec<i64> {
         let mut rv = vec![];
 
         for k in keys {
-            rv.push(mutations[*k].position().into())
+            rv.push(mutations[*k as usize].position().into())
         }
 
         rv
@@ -372,12 +393,12 @@ mod test_create_offspring_genome {
         assert!(parent1_genome
             .mutations
             .windows(2)
-            .all(|w| mutations[w[0]].position() <= mutations[w[1]].position()),);
+            .all(|w| mutations[w[0] as usize].position() <= mutations[w[1] as usize].position()),);
         assert!(parent2_genome
             .mutations
             .windows(2)
-            .all(|w| mutations[w[0]].position() <= mutations[w[1]].position()),);
-        let mut offspring_genomes = Vec::<usize>::new();
+            .all(|w| mutations[w[0] as usize].position() <= mutations[w[1] as usize].position()),);
+        let mut offspring_genomes = Vec::<u32>::new();
         let range = generate_offspring_genome(
             (parent1_genome, parent2_genome),
             &mutations,
@@ -393,7 +414,7 @@ mod test_create_offspring_genome {
         );
         assert!(naive_output
             .windows(2)
-            .all(|w| mutations[w[0]].position() <= mutations[w[1]].position()),);
+            .all(|w| mutations[w[0] as usize].position() <= mutations[w[1] as usize].position()),);
         assert_eq!(range.stop, offspring_genomes.len());
         assert_eq!(
             naive_output.len(),

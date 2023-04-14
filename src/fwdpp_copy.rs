@@ -15,7 +15,7 @@ use forrustts::prelude::*;
 
 #[derive(Default, Debug)]
 struct HaploidGenome {
-    mutations: Vec<usize>,
+    mutations: Vec<u32>,
     count: u32,
 }
 
@@ -68,7 +68,7 @@ impl DiploidPopulation {
             .for_each(|g| {
                 g.mutations
                     .iter()
-                    .for_each(|m| self.mutation_counts[*m] += g.count)
+                    .for_each(|m| self.mutation_counts[*m as usize] += g.count)
             });
         //for g in &self.haplotypes {
         //    if g.count > 0 {
@@ -164,7 +164,7 @@ fn remove_fixations_from_extant_genomes(
         genomes
             .iter_mut()
             .filter(|g| g.count > 0)
-            .for_each(|g| g.mutations.retain(|k| mutation_counts[*k] < twon));
+            .for_each(|g| g.mutations.retain(|k| mutation_counts[*k as usize] < twon));
         true
     } else {
         false
@@ -174,11 +174,11 @@ fn remove_fixations_from_extant_genomes(
 #[inline(never)]
 fn update_genomes(
     genomes: (usize, usize),
-    mutations: Vec<usize>,
+    mutations: Vec<u32>,
     genetic_map: &GeneticMap,
     pop: &mut DiploidPopulation,
     genome_queue: &mut Vec<usize>,
-    temporary_mutations: &mut Vec<usize>,
+    temporary_mutations: &mut Vec<u32>,
 ) -> usize {
     let (genome1, genome2) = genomes;
     let (output_genome_index, update) =

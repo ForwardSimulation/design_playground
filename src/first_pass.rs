@@ -52,18 +52,18 @@ impl HaploidGenomes {
 // Implementation is specific to "diploid",
 // so not an associated fn of HaploidGenomes
 fn get_parental_genomes(
-    haplotypes: &HaploidGenomes,
+    genomes: &HaploidGenomes,
     parent: DiploidGenome,
 ) -> (ParentalGenome, ParentalGenome) {
     (
-        haplotypes.get_genome(parent.first),
-        haplotypes.get_genome(parent.second),
+        genomes.get_genome(parent.first),
+        genomes.get_genome(parent.second),
     )
 }
 
 /// When will the borrow checker hate this?
 pub struct DiploidPopulation {
-    haplotypes: HaploidGenomes,
+    genomes: HaploidGenomes,
     individuals: Vec<DiploidGenome>,
     mutations: Vec<Mutation>,
     mutation_counts: Vec<u32>,
@@ -72,14 +72,14 @@ pub struct DiploidPopulation {
 impl DiploidPopulation {
     pub fn new(size: u32) -> Option<Self> {
         if size > 0 {
-            let haplotypes = HaploidGenomes::default();
+            let genomes = HaploidGenomes::default();
 
             // Now, everyone starts with a single "empty"
             // genome
             let individuals = vec![DiploidGenome::new(usize::MAX, usize::MAX); size as usize];
 
             Some(Self {
-                haplotypes,
+                genomes,
                 individuals,
                 mutations: vec![],
                 mutation_counts: vec![],
@@ -103,7 +103,7 @@ impl DiploidPopulation {
     pub fn count_mutations(&mut self) {
         self.mutation_counts.fill(0);
         self.mutation_counts.resize(self.mutations.len(), 0);
-        self.haplotypes
+        self.genomes
             .mutations
             .iter()
             .for_each(|m| self.mutation_counts[*m as usize] += 1);
@@ -121,7 +121,7 @@ impl DiploidPopulation {
     }
 
     pub fn sum_extant_genome_sizes(&self) -> usize {
-        self.haplotypes.mutations.len()
+        self.genomes.mutations.len()
     }
 }
 
@@ -254,10 +254,10 @@ pub fn evolve_pop_with_haplotypes(
     let mut genetic_map = genetic_map;
 
     //let mut parent_haplotype_map = vec![];
-    let mut offspring_haplotypes = HaploidGenomes::default();
+    let mut offspring_genomes = HaploidGenomes::default();
+    offspring_genomes.mutations.reserve(1000);
     let mut offspring = vec![];
     for generation in 0..params.num_generations {
-        offspring_haplotypes.mutations.reserve(1000);
         let mut queue = pop.mutation_recycling();
         for _ in 0..params.num_individuals {
             // Pick two parents
@@ -278,7 +278,7 @@ pub fn evolve_pop_with_haplotypes(
             pop.mutation_counts
                 .resize(pop.mutation_counts.len() + mutations.len(), 0);
 
-            let genomes = get_parental_genomes(&pop.haplotypes, pop.individuals[parent1]);
+            let genomes = get_parental_genomes(&pop.genomes, pop.individuals[parent1]);
             let genomes = if rng.sample(u01) < 0.5 {
                 genomes
             } else {
@@ -289,9 +289,9 @@ pub fn evolve_pop_with_haplotypes(
                 &pop.mutations,
                 mutations,
                 genetic_map.breakpoints(),
-                &mut offspring_haplotypes.mutations,
+                &mut offspring_genomes.mutations,
             );
-            let first = offspring_haplotypes.add_range(range);
+            let first = offspring_genomes.add_range(range);
 
             let mutations = generate_mutations(
                 generation,
@@ -306,7 +306,7 @@ pub fn evolve_pop_with_haplotypes(
             pop.mutation_counts
                 .resize(pop.mutation_counts.len() + mutations.len(), 0);
 
-            let genomes = get_parental_genomes(&pop.haplotypes, pop.individuals[parent2]);
+            let genomes = get_parental_genomes(&pop.genomes, pop.individuals[parent2]);
             let genomes = if rng.sample(u01) < 0.5 {
                 genomes
             } else {
@@ -317,14 +317,14 @@ pub fn evolve_pop_with_haplotypes(
                 &pop.mutations,
                 mutations,
                 genetic_map.breakpoints(),
-                &mut offspring_haplotypes.mutations,
+                &mut offspring_genomes.mutations,
             );
-            let second = offspring_haplotypes.add_range(range);
+            let second = offspring_genomes.add_range(range);
             offspring.push(DiploidGenome { first, second });
         }
-        std::mem::swap(&mut pop.haplotypes, &mut offspring_haplotypes);
-        offspring_haplotypes.genomes.clear();
-        offspring_haplotypes.mutations.clear();
+        std::mem::swap(&mut pop.genomes, &mut offspring_genomes);
+        offspring_genomes.genomes.clear();
+        offspring_genomes.mutations.clear();
 
         std::mem::swap(&mut pop.individuals, &mut offspring);
         offspring.clear();
@@ -333,25 +333,10 @@ pub fn evolve_pop_with_haplotypes(
         if fixation_removal_check(
             &pop.mutation_counts,
             2 * params.num_individuals,
-            &mut pop.haplotypes,
+            &mut pop.genomes,
         ) {
             set_fixation_counts_to_zero(2 * params.num_individuals, &mut pop.mutation_counts);
         };
-        // for h in &pop.haplotypes.haplotypes {
-        //     assert!(pop.haplotypes.mutations[h.start..h.stop]
-        //         .windows(2)
-        //         .all(|w| pop.mutations[w[0]].position() <= pop.mutations[w[1]].position()));
-        // }
-        // println!(
-        //     "{} {}/{}",
-        //     params.mutation_rate,
-        //     parent_haplotype_map
-        //         .iter()
-        //         .filter(|i| **i != usize::MAX)
-        //         .count(),
-        //     pop.haplotypes.haplotypes.len(),
-        // );
-        //println!("done with {generation}, {}", pop.mutations.len());
     }
     Some(pop)
 }

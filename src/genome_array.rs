@@ -1,3 +1,5 @@
+//! Prototype streamlined storage of haploid genomes
+
 use rand::prelude::Rng;
 use rand::SeedableRng;
 

@@ -3,7 +3,7 @@ use forrustts::genetics::GeneticMap;
 use forrustts::genetics::GeneticMapBuilder;
 use forrustts::genetics::PoissonCrossover;
 
-use design_playground::first_pass::*;
+use design_playground::genome_array::*;
 use design_playground::SimParams;
 
 fn main() {

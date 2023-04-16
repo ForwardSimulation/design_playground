@@ -17,14 +17,14 @@ use crate::common::SimParams;
 
 #[derive(Debug, Default)]
 struct HaploidGenomes {
-    genomes: Vec<MutationRange>,
+    genome_spans: Vec<MutationRange>,
     mutations: Vec<u32>,
 }
 
 impl HaploidGenomes {
     fn get_genome(&self, genome: usize) -> ParentalGenome {
         if genome != usize::MAX {
-            let index_range = self.genomes[genome];
+            let index_range = self.genome_spans[genome];
             let mutations = &self.mutations[index_range.start..index_range.stop];
             ParentalGenome {
                 mutations,
@@ -44,8 +44,8 @@ impl HaploidGenomes {
         if range.start == range.stop {
             usize::MAX
         } else {
-            let rv = self.genomes.len();
-            self.genomes.push(range);
+            let rv = self.genome_spans.len();
+            self.genome_spans.push(range);
             rv
         }
     }
@@ -203,30 +203,34 @@ fn fixation_removal_check(mutation_counts: &[u32], twon: u32, output: &mut Haplo
             .mutations
             .retain(|m| mutation_counts[*m as usize] < twon);
         let delta = x - output.mutations.len();
-        assert_eq!(delta % output.genomes.len(), 0);
+        assert_eq!(delta % output.genome_spans.len(), 0);
 
-        let delta_per_genome = delta / output.genomes.len();
+        let delta_per_genome = delta / output.genome_spans.len();
         assert_eq!(
             delta_per_genome,
             mutation_counts.iter().filter(|m| **m == twon).count()
         );
 
         // NOTE: could be SIMD later
-        output.genomes.iter_mut().enumerate().for_each(|(i, h)| {
-            let c = h.start;
-            h.start -= i * delta_per_genome;
-            if i > 0 {
-                assert!(c > h.start);
-            }
-            assert!(h.start < output.mutations.len());
-            h.stop -= (i + 1) * delta_per_genome;
-            assert!(h.stop >= h.start);
-            assert!(
-                h.stop <= output.mutations.len(),
-                "{h:?} {}",
-                output.mutations.len()
-            );
-        });
+        output
+            .genome_spans
+            .iter_mut()
+            .enumerate()
+            .for_each(|(i, h)| {
+                let c = h.start;
+                h.start -= i * delta_per_genome;
+                if i > 0 {
+                    assert!(c > h.start);
+                }
+                assert!(h.start < output.mutations.len());
+                h.stop -= (i + 1) * delta_per_genome;
+                assert!(h.stop >= h.start);
+                assert!(
+                    h.stop <= output.mutations.len(),
+                    "{h:?} {}",
+                    output.mutations.len()
+                );
+            });
         true
     } else {
         false
@@ -325,7 +329,7 @@ pub fn evolve_pop_with_haplotypes(
             offspring.push(DiploidGenome { first, second });
         }
         std::mem::swap(&mut pop.genomes, &mut offspring_genomes);
-        offspring_genomes.genomes.clear();
+        offspring_genomes.genome_spans.clear();
         offspring_genomes.mutations.clear();
 
         std::mem::swap(&mut pop.individuals, &mut offspring);

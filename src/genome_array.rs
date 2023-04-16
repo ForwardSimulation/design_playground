@@ -240,10 +240,7 @@ fn fixation_removal_check(mutation_counts: &[u32], twon: u32, output: &mut Haplo
 // A proper implementation
 // would be generic over "generating mutations"
 #[inline(never)]
-pub fn evolve_pop_with_haplotypes(
-    params: SimParams,
-    genetic_map: GeneticMap,
-) -> Option<DiploidPopulation> {
+pub fn evolve_pop(params: SimParams, genetic_map: GeneticMap) -> Option<DiploidPopulation> {
     let params = params.validate()?;
     let mut pop = DiploidPopulation::new(params.num_individuals)?;
 
@@ -370,7 +367,7 @@ mod tests {
             // Empty genetic map == no recombination
             let builder = forrustts::genetics::GeneticMapBuilder::default();
             let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
-            let _ = evolve_pop_with_haplotypes(params, genetic_map).unwrap();
+            let _ = evolve_pop(params, genetic_map).unwrap();
         }
     }
 
@@ -397,7 +394,7 @@ mod tests {
             let builder = forrustts::genetics::GeneticMapBuilder::default().extend_poisson(&poisson);
 
             let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
-            let _ = evolve_pop_with_haplotypes(params, genetic_map).unwrap();
+            let _ = evolve_pop(params, genetic_map).unwrap();
         }
     }
 }

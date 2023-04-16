@@ -11,7 +11,7 @@ fn main() {
     let poisson = vec![PoissonCrossover::new(0, 1000000, params.recrate).unwrap()];
     let builder = GeneticMapBuilder::default().extend_poisson(&poisson);
     let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
-    let pop = evolve_pop_with_haplotypes(params, genetic_map).unwrap();
+    let pop = evolve_pop(params, genetic_map).unwrap();
     println!(
         "{} {} {} {}",
         pop.num_segregating_mutations(),

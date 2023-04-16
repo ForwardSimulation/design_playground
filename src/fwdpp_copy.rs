@@ -241,10 +241,7 @@ fn update_genomes(
 }
 
 #[inline(never)]
-pub fn evolve_pop_with_haplotypes(
-    params: SimParams,
-    genetic_map: GeneticMap,
-) -> Option<DiploidPopulation> {
+pub fn evolve_pop(params: SimParams, genetic_map: GeneticMap) -> Option<DiploidPopulation> {
     let params = params.validate()?;
     let mut pop = DiploidPopulation::new(params.num_individuals as usize);
 

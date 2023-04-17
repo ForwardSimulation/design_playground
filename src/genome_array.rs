@@ -49,6 +49,11 @@ impl HaploidGenomes {
             rv
         }
     }
+
+    fn clear(&mut self) {
+        self.mutations.clear();
+        self.genome_spans.clear();
+    }
 }
 
 // Implementation is specific to "diploid",
@@ -376,8 +381,7 @@ pub fn evolve_pop(params: SimParams, genetic_map: GeneticMap) -> Option<DiploidP
             offspring.push(offspring_genome);
         }
         std::mem::swap(&mut pop.genomes, &mut offspring_genomes);
-        offspring_genomes.genome_spans.clear();
-        offspring_genomes.mutations.clear();
+        offspring_genomes.clear();
 
         std::mem::swap(&mut pop.individuals, &mut offspring);
         offspring.clear();

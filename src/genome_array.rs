@@ -237,6 +237,87 @@ fn fixation_removal_check(mutation_counts: &[u32], twon: u32, output: &mut Haplo
     }
 }
 
+fn generate_offspring_details(
+    parent: usize,
+    generation: u32,
+    num_mutations: rand_distr::Poisson<f64>,
+    position_generator: rand::distributions::Uniform<Position>,
+    rng: &mut rand::rngs::StdRng,
+    genetic_map: &mut GeneticMap,
+    queue: &mut Vec<usize>,
+    pop: &mut DiploidPopulation,
+    offspring_genomes: &mut HaploidGenomes,
+) -> usize {
+    let u01 = rand::distributions::Uniform::new(0., 1.);
+    // Mutations for offspring genome 1
+    let mutations = generate_mutations(
+        generation,
+        num_mutations,
+        position_generator,
+        queue,
+        &mut pop.mutations,
+        rng,
+    );
+
+    genetic_map.generate_breakpoints(rng);
+    pop.mutation_counts
+        .resize(pop.mutation_counts.len() + mutations.len(), 0);
+
+    let genomes = get_parental_genomes(&pop.genomes, pop.individuals[parent]);
+    let genomes = if rng.sample(u01) < 0.5 {
+        genomes
+    } else {
+        (genomes.1, genomes.0)
+    };
+    let range = generate_offspring_genome(
+        genomes,
+        &pop.mutations,
+        mutations,
+        genetic_map.breakpoints(),
+        &mut offspring_genomes.mutations,
+    );
+    offspring_genomes.add_range(range)
+}
+
+fn generate_offspring(
+    parent_picker: rand::distributions::Uniform<usize>,
+    generation: u32,
+    num_mutations: rand_distr::Poisson<f64>,
+    position_generator: rand::distributions::Uniform<Position>,
+    rng: &mut rand::rngs::StdRng,
+    genetic_map: &mut GeneticMap,
+    queue: &mut Vec<usize>,
+    pop: &mut DiploidPopulation,
+    offspring_genomes: &mut HaploidGenomes,
+) -> DiploidGenome {
+    let parent1 = rng.sample(parent_picker);
+    let parent2 = rng.sample(parent_picker);
+
+    let first = generate_offspring_details(
+        parent1,
+        generation,
+        num_mutations,
+        position_generator,
+        rng,
+        genetic_map,
+        queue,
+        pop,
+        offspring_genomes,
+    );
+    let second = generate_offspring_details(
+        parent2,
+        generation,
+        num_mutations,
+        position_generator,
+        rng,
+        genetic_map,
+        queue,
+        pop,
+        offspring_genomes,
+    );
+    DiploidGenome { first, second }
+}
+
 // A proper implementation
 // would be generic over "generating mutations"
 #[inline(never)]
@@ -263,67 +344,18 @@ pub fn evolve_pop(params: SimParams, genetic_map: GeneticMap) -> Option<DiploidP
     for generation in 0..params.num_generations {
         let mut queue = pop.mutation_recycling();
         for _ in 0..params.num_individuals {
-            // Pick two parents
-            let parent1 = rng.sample(parent_picker);
-            let parent2 = rng.sample(parent_picker);
-
-            // Mutations for offspring genome 1
-            let mutations = generate_mutations(
+            let offspring_genome = generate_offspring(
+                parent_picker,
                 generation,
                 num_mutations,
                 position_generator,
-                &mut queue,
-                &mut pop.mutations,
                 &mut rng,
-            );
-
-            genetic_map.generate_breakpoints(&mut rng);
-            pop.mutation_counts
-                .resize(pop.mutation_counts.len() + mutations.len(), 0);
-
-            let genomes = get_parental_genomes(&pop.genomes, pop.individuals[parent1]);
-            let genomes = if rng.sample(u01) < 0.5 {
-                genomes
-            } else {
-                (genomes.1, genomes.0)
-            };
-            let range = generate_offspring_genome(
-                genomes,
-                &pop.mutations,
-                mutations,
-                genetic_map.breakpoints(),
-                &mut offspring_genomes.mutations,
-            );
-            let first = offspring_genomes.add_range(range);
-
-            let mutations = generate_mutations(
-                generation,
-                num_mutations,
-                position_generator,
+                &mut genetic_map,
                 &mut queue,
-                &mut pop.mutations,
-                &mut rng,
+                &mut pop,
+                &mut offspring_genomes,
             );
-
-            genetic_map.generate_breakpoints(&mut rng);
-            pop.mutation_counts
-                .resize(pop.mutation_counts.len() + mutations.len(), 0);
-
-            let genomes = get_parental_genomes(&pop.genomes, pop.individuals[parent2]);
-            let genomes = if rng.sample(u01) < 0.5 {
-                genomes
-            } else {
-                (genomes.1, genomes.0)
-            };
-            let range = generate_offspring_genome(
-                genomes,
-                &pop.mutations,
-                mutations,
-                genetic_map.breakpoints(),
-                &mut offspring_genomes.mutations,
-            );
-            let second = offspring_genomes.add_range(range);
-            offspring.push(DiploidGenome { first, second });
+            offspring.push(offspring_genome);
         }
         std::mem::swap(&mut pop.genomes, &mut offspring_genomes);
         offspring_genomes.genome_spans.clear();

@@ -237,23 +237,44 @@ fn fixation_removal_check(mutation_counts: &[u32], twon: u32, output: &mut Haplo
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+struct SimDistributions {
+    u01: rand::distributions::Uniform<f64>,
+    num_mutations: rand_distr::Poisson<f64>,
+    position_generator: rand::distributions::Uniform<Position>,
+    parent_picker: rand::distributions::Uniform<usize>,
+}
+
+impl SimDistributions {
+    fn new(num_individuals: u32, mutation_rate: f64, genome_length: Position) -> Option<Self> {
+        let parent_picker = rand::distributions::Uniform::<usize>::new(0, num_individuals as usize);
+        let u01 = rand::distributions::Uniform::new(0., 1.);
+        let num_mutations = rand_distr::Poisson::<f64>::new(mutation_rate).ok()?;
+        let position_generator =
+            rand::distributions::Uniform::<Position>::new(Position::new_valid(0), genome_length);
+        Some(Self {
+            u01,
+            num_mutations,
+            position_generator,
+            parent_picker,
+        })
+    }
+}
+
 fn generate_offspring_details(
     parent: usize,
     generation: u32,
-    num_mutations: rand_distr::Poisson<f64>,
-    position_generator: rand::distributions::Uniform<Position>,
+    distributions: SimDistributions,
     rng: &mut rand::rngs::StdRng,
     genetic_map: &mut GeneticMap,
     queue: &mut Vec<usize>,
     pop: &mut DiploidPopulation,
     offspring_genomes: &mut HaploidGenomes,
 ) -> usize {
-    let u01 = rand::distributions::Uniform::new(0., 1.);
-    // Mutations for offspring genome 1
     let mutations = generate_mutations(
         generation,
-        num_mutations,
-        position_generator,
+        distributions.num_mutations,
+        distributions.position_generator,
         queue,
         &mut pop.mutations,
         rng,
@@ -264,7 +285,7 @@ fn generate_offspring_details(
         .resize(pop.mutation_counts.len() + mutations.len(), 0);
 
     let genomes = get_parental_genomes(&pop.genomes, pop.individuals[parent]);
-    let genomes = if rng.sample(u01) < 0.5 {
+    let genomes = if rng.sample(distributions.u01) < 0.5 {
         genomes
     } else {
         (genomes.1, genomes.0)
@@ -280,24 +301,21 @@ fn generate_offspring_details(
 }
 
 fn generate_offspring(
-    parent_picker: rand::distributions::Uniform<usize>,
     generation: u32,
-    num_mutations: rand_distr::Poisson<f64>,
-    position_generator: rand::distributions::Uniform<Position>,
+    distributions: SimDistributions,
     rng: &mut rand::rngs::StdRng,
     genetic_map: &mut GeneticMap,
     queue: &mut Vec<usize>,
     pop: &mut DiploidPopulation,
     offspring_genomes: &mut HaploidGenomes,
 ) -> DiploidGenome {
-    let parent1 = rng.sample(parent_picker);
-    let parent2 = rng.sample(parent_picker);
+    let parent1 = rng.sample(distributions.parent_picker);
+    let parent2 = rng.sample(distributions.parent_picker);
 
     let first = generate_offspring_details(
         parent1,
         generation,
-        num_mutations,
-        position_generator,
+        distributions,
         rng,
         genetic_map,
         queue,
@@ -307,8 +325,7 @@ fn generate_offspring(
     let second = generate_offspring_details(
         parent2,
         generation,
-        num_mutations,
-        position_generator,
+        distributions,
         rng,
         genetic_map,
         queue,
@@ -326,14 +343,12 @@ pub fn evolve_pop(params: SimParams, genetic_map: GeneticMap) -> Option<DiploidP
     let mut pop = DiploidPopulation::new(params.num_individuals)?;
 
     let mut rng = rand::rngs::StdRng::seed_from_u64(params.seed);
-    let parent_picker =
-        rand::distributions::Uniform::<usize>::new(0, params.num_individuals as usize);
-    let num_mutations = rand_distr::Poisson::<f64>::new(params.mutation_rate).ok()?;
-    let position_generator = rand::distributions::Uniform::<Position>::new(
-        Position::new_valid(0),
+
+    let distributions = SimDistributions::new(
+        params.num_individuals,
+        params.mutation_rate,
         Position::new_valid(1000000),
-    );
-    let u01 = rand::distributions::Uniform::new(0., 1.);
+    )?;
 
     let mut genetic_map = genetic_map;
 
@@ -345,10 +360,8 @@ pub fn evolve_pop(params: SimParams, genetic_map: GeneticMap) -> Option<DiploidP
         let mut queue = pop.mutation_recycling();
         for _ in 0..params.num_individuals {
             let offspring_genome = generate_offspring(
-                parent_picker,
                 generation,
-                num_mutations,
-                position_generator,
+                distributions,
                 &mut rng,
                 &mut genetic_map,
                 &mut queue,
@@ -422,7 +435,6 @@ mod tests {
             let genome_length = Position::new_valid(1000000);
             let poisson = vec![forrustts::genetics::PoissonCrossover::new(
                 genome_start, genome_length, 2.0).unwrap()];
-            // Empty genetic map == no recombination
             let builder = forrustts::genetics::GeneticMapBuilder::default().extend_poisson(&poisson);
 
             let genetic_map = GeneticMap::new_from_builder(builder).unwrap();

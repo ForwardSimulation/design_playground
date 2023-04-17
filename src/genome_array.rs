@@ -297,7 +297,12 @@ fn generate_offspring_details(
         genetic_map.breakpoints(),
         &mut offspring_genomes.mutations,
     );
-    offspring_genomes.add_range(range)
+    if range.stop > range.start {
+        offspring_genomes.add_range(range)
+    } else {
+        // offspring genome is empty
+        usize::MAX
+    }
 }
 
 fn generate_offspring(

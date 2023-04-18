@@ -18,6 +18,15 @@ pub struct SimParams {
     pub recrate: f64,
 }
 
+impl SimParams {
+    pub fn validate(self) -> Option<Self> {
+        if !self.mutation_rate.is_finite() || self.mutation_rate < 0.0 {
+            return None;
+        }
+        Some(self)
+    }
+}
+
 // We need a type with a more complex
 // layout than a simple position.
 // It is > 32 bits just to try

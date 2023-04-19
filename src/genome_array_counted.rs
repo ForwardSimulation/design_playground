@@ -159,9 +159,10 @@ impl DiploidPopulation {
 fn fixation_removal_check(mutation_counts: &[u32], twon: u32, output: &mut HaploidGenomes) -> bool {
     if mutation_counts.iter().any(|m| *m == twon) {
         let x = output.mutations.len();
+        // SAFETY: see comments in genome_array.rs
         output
             .mutations
-            .retain(|m| mutation_counts[*m as usize] < twon);
+            .retain(|m| *unsafe { mutation_counts.get_unchecked(*m as usize) } < twon);
         let delta = x - output.mutations.len();
         assert_eq!(delta % output.genome_spans.len(), 0);
 

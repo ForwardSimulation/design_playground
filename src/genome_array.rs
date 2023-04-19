@@ -137,10 +137,30 @@ impl DiploidPopulation {
 #[inline(never)]
 fn fixation_removal_check(mutation_counts: &[u32], twon: u32, output: &mut HaploidGenomes) -> bool {
     if mutation_counts.iter().any(|m| *m == twon) {
+        // NOTE: using this as an assert
+        // eliminates all performance
+        // benefits of the unsafe code below
+        debug_assert!(output
+            .mutations
+            .iter()
+            .all(|m| (*m as usize) < mutation_counts.len()));
         let x = output.mutations.len();
+        // SAFETY: None in general. :(
+        // In the specific case of this function not being public,
+        // genomes only contain mutation keys generated
+        // as they are added to the pop's mutation array.
+        // As the same time, we make sure that mutation_counts'
+        // length is also correct.
+        //
+        // This is a sticky issue:
+        // 1. The perf gain of unsafe here is quite big.
+        // 2. But it is gonna be hard to encapsulate things
+        //    to the point where we feel generally good about saftety
+        // 3. Therefore, it seems that the function itself should
+        //    be marked unsafe in the absence of such encapsulation.
         output
             .mutations
-            .retain(|m| mutation_counts[*m as usize] < twon);
+            .retain(|m| *unsafe { mutation_counts.get_unchecked(*m as usize) } < twon);
         let delta = x - output.mutations.len();
         assert_eq!(delta % output.genome_spans.len(), 0);
 

@@ -161,10 +161,11 @@ fn remove_fixations_from_extant_genomes(
     genomes: &mut [HaploidGenome],
 ) -> bool {
     if mutation_counts.iter().any(|c| *c == twon) {
-        genomes
-            .iter_mut()
-            .filter(|g| g.count > 0)
-            .for_each(|g| g.mutations.retain(|k| mutation_counts[*k as usize] < twon));
+        genomes.iter_mut().filter(|g| g.count > 0).for_each(|g| {
+            // SAFETY: see comments in genome_array.rs
+            g.mutations
+                .retain(|k| *unsafe { mutation_counts.get_unchecked(*k as usize) } < twon)
+        });
         true
     } else {
         false

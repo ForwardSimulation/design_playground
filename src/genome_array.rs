@@ -189,15 +189,6 @@ impl DiploidPopulation {
 //     rv
 // }
 
-impl SimParams {
-    pub fn validate(self) -> Option<Self> {
-        if !self.mutation_rate.is_finite() || self.mutation_rate < 0.0 {
-            return None;
-        }
-        Some(self)
-    }
-}
-
 // This normally wouldn't be pub,
 // but should be unit tested anyways.
 #[inline(never)]

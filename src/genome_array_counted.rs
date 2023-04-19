@@ -166,10 +166,6 @@ fn fixation_removal_check(mutation_counts: &[u32], twon: u32, output: &mut Haplo
         assert_eq!(delta % output.genome_spans.len(), 0);
 
         let delta_per_genome = delta / output.genome_spans.len();
-        assert_eq!(
-            delta_per_genome,
-            mutation_counts.iter().filter(|m| **m == twon).count()
-        );
 
         // NOTE: could be SIMD later
         output

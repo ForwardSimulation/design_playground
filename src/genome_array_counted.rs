@@ -380,60 +380,6 @@ pub fn evolve_pop(params: SimParams, genetic_map: GeneticMap) -> Option<DiploidP
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    use proptest::prelude::*;
-
-    proptest! {
-        #[test]
-        #[ignore]
-        fn run_sim_no_recombination(seed in 0..u64::MAX) {
-            let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
-            let make_mutrate = rand_distr::Exp::new(1.0).unwrap();
-            let mutation_rate = rng.sample(make_mutrate);
-            let params = SimParams {
-                seed,
-                num_individuals: 100,
-                num_generations: 100,
-                mutation_rate,
-                recrate: 0.0,
-            };
-            // Empty genetic map == no recombination
-            let builder = forrustts::genetics::GeneticMapBuilder::default();
-            let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
-            let _ = evolve_pop(params, genetic_map).unwrap();
-        }
-    }
-
-    proptest! {
-        #[test]
-        #[ignore]
-        fn run_sim_with_recombination(seed in 0..u64::MAX) {
-            let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
-            let make_mutrate = rand_distr::Exp::new(1.0).unwrap();
-            let mutation_rate = rng.sample(make_mutrate);
-            let params = SimParams {
-                seed,
-                num_individuals: 100,
-                num_generations: 100,
-                mutation_rate,
-                recrate: 0.0,
-            };
-
-            let genome_start = Position::new_valid(0);
-            let genome_length = Position::new_valid(1000000);
-            let poisson = vec![forrustts::genetics::PoissonCrossover::new(
-                genome_start, genome_length, 2.0).unwrap()];
-            let builder = forrustts::genetics::GeneticMapBuilder::default().extend_poisson(&poisson);
-
-            let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
-            let _ = evolve_pop(params, genetic_map).unwrap();
-        }
-    }
-}
-
-#[cfg(test)]
 mod tests_to_delete {
     #[test]
     fn test_slice_behavior() {

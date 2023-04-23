@@ -113,7 +113,8 @@ impl DiploidPopulation {
         self.genomes
             .mutations
             .iter()
-            .for_each(|m| self.mutation_counts[*m as usize] += 1);
+            // SAFETY: same issues as below
+            .for_each(|m| *unsafe { self.mutation_counts.get_unchecked_mut(*m as usize) } += 1);
     }
 
     #[inline(never)]

@@ -66,9 +66,9 @@ impl DiploidPopulation {
             .iter_mut()
             .filter(|g| g.count > 0)
             .for_each(|g| {
-                g.mutations
-                    .iter()
-                    .for_each(|m| self.mutation_counts[*m as usize] += g.count)
+                g.mutations.iter().for_each(|m| {
+                    *unsafe { self.mutation_counts.get_unchecked_mut(*m as usize) } += g.count
+                })
             });
         //for g in &self.haplotypes {
         //    if g.count > 0 {

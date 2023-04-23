@@ -143,7 +143,7 @@ fn extend_from_slice(
     offspring_haplotypes: &mut Vec<u32>,
 ) -> usize {
     let n = get_partition_index(genome, mutations, position);
-    offspring_haplotypes.extend_from_slice(&genome[..(n as usize)]);
+    offspring_haplotypes.extend_from_slice(&genome[..n]);
     n
 }
 
@@ -198,14 +198,20 @@ pub fn generate_offspring_genome(
             forrustts::genetics::Breakpoint::IndependentAssortment(pos) => *pos,
             _ => unimplemented!("unhandled Breakpoint variant"),
         };
-        mut_index += new_mutations[mut_index..]
+        mut_index += new_mutations
             .iter()
-            .take_while(|k| mutations[**k as usize].position() < bpos)
-            .inspect(|k| {
-                let mpos = mutations[**k as usize].position();
-                update_genome(mutations, mpos, &mut current_genome, offspring_mutations);
-                offspring_mutations.push(**k);
+            .skip(mut_index)
+            .map(|k| {
+                let mpos = mutations[*k as usize].position();
+                if mpos < bpos {
+                    update_genome(mutations, mpos, &mut current_genome, offspring_mutations);
+                    offspring_mutations.push(*k);
+                    true
+                } else {
+                    false
+                }
             })
+            .take_while(|&k| k)
             .count();
         update_genome(mutations, bpos, &mut current_genome, offspring_mutations);
 

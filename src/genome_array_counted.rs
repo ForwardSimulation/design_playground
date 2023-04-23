@@ -129,7 +129,9 @@ impl DiploidPopulation {
         {
             self.genomes.mutations[range.start..range.stop]
                 .iter()
-                .for_each(|m| self.mutation_counts[*m as usize] += count);
+                .for_each(|m| {
+                    *unsafe { self.mutation_counts.get_unchecked_mut(*m as usize) } += count
+                });
         }
     }
 

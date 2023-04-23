@@ -378,37 +378,3 @@ pub fn evolve_pop(params: SimParams, genetic_map: GeneticMap) -> Option<DiploidP
     }
     Some(pop)
 }
-
-#[cfg(test)]
-mod tests_to_delete {
-    #[test]
-    fn test_slice_behavior() {
-        let v = Vec::<i32>::new();
-        let s = &v[0..];
-        assert!(s.is_empty());
-        let ss = &s[0..];
-        assert!(ss.is_empty());
-    }
-
-    #[test]
-    fn test_swap_slices() {
-        let v = vec![1, 2, 3, 4];
-        let mut s0 = &v[0..2];
-        let mut s1 = &v[2..];
-        std::mem::swap(&mut s0, &mut s1);
-        assert_eq!(s0, &[3, 4]);
-        assert_eq!(s1, &[1, 2]);
-    }
-
-    #[test]
-    fn test_size() {
-        // This is one idea of production code
-        // could employ for "haplotype keys".
-        struct X(std::num::NonZeroUsize);
-        assert_eq!(std::mem::size_of::<X>(), std::mem::size_of::<usize>());
-        assert_eq!(
-            std::mem::size_of::<Option<X>>(),
-            std::mem::size_of::<usize>()
-        );
-    }
-}

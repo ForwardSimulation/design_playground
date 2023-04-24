@@ -445,6 +445,9 @@ mod test_create_offspring_genome {
         for i in &offspring_genomes {
             assert_eq!(naive_output.iter().filter(|&j| j == i).count(), 1);
         }
+        for i in &naive_output {
+            assert_eq!(offspring_genomes.iter().filter(|&j| j == i).count(), 1);
+        }
     }
 
     proptest! {

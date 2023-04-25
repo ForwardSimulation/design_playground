@@ -136,6 +136,26 @@ fn get_partition_index(genome: &[u32], mutations: &[Mutation], position: Positio
     genome.partition_point(|k| mutations[*k as usize].position() < position)
 }
 
+fn deduplicate_input_mutations(
+    genome: &[u32],
+    mutations: &[Mutation],
+    position: Position,
+) -> usize {
+    //match genome.first() {
+    //    None => 0,
+    //    Some(x) if mutations[*x as usize].position() != position => 0,
+    //    Some(_) => 1,
+    //}
+
+    // NOTE: this version will visit 2x as many elements,
+    // but we should keep it until we have explicit tests
+    // of hand-written edge cases
+    genome
+        .iter()
+        .take_while(|k| mutations[**k as usize].position() == position)
+        .count()
+}
+
 fn extend_from_slice(
     genome: &[u32],
     mutations: &[Mutation],
@@ -158,7 +178,7 @@ fn update_genome(
         mutations,
         position,
         offspring_haplotypes,
-    )
+    );
 }
 
 #[inline(never)]
@@ -168,10 +188,19 @@ fn merge_mutations(
     offspring_haplotypes: &mut Vec<u32>,
     current_genome: &mut ParentalGenome,
 ) {
+    let mut last_mpos = None;
     for m in new_mutations.iter() {
         let mpos = mutations[*m as usize].position();
-        update_genome(mutations, mpos, current_genome, offspring_haplotypes);
-        offspring_haplotypes.push(*m);
+        if last_mpos.map_or_else(|| true, |v| v != mpos) {
+            update_genome(mutations, mpos, current_genome, offspring_haplotypes);
+            current_genome.current_mutation_index += deduplicate_input_mutations(
+                &current_genome.mutations[current_genome.current_mutation_index..],
+                mutations,
+                mpos,
+            );
+            last_mpos = Some(mpos);
+            offspring_haplotypes.push(*m);
+        }
     }
     offspring_haplotypes
         .extend_from_slice(&current_genome.mutations[current_genome.current_mutation_index..]);
@@ -191,21 +220,25 @@ pub fn generate_offspring_genome(
     let start = offspring_mutations.len();
     let mut mut_index = 0_usize;
     for b in breakpoints {
-        let bpos = match b {
-            // NOTE: forrustts needs to handle this
-            // comparison with trat impls
-            forrustts::genetics::Breakpoint::Crossover(pos) => *pos,
-            forrustts::genetics::Breakpoint::IndependentAssortment(pos) => *pos,
-            _ => unimplemented!("unhandled Breakpoint variant"),
-        };
+        let bpos = Position::from(*b);
+        let mut last_mpos: Option<Position> = None;
+        // NOTE: this logic shouold be another fn
         mut_index += new_mutations
             .iter()
             .skip(mut_index)
             .map(|k| {
                 let mpos = mutations[*k as usize].position();
                 if mpos < bpos {
-                    update_genome(mutations, mpos, &mut current_genome, offspring_mutations);
-                    offspring_mutations.push(*k);
+                    if last_mpos.map_or_else(|| true, |v| v != mpos) {
+                        update_genome(mutations, mpos, &mut current_genome, offspring_mutations);
+                        current_genome.current_mutation_index += deduplicate_input_mutations(
+                            &current_genome.mutations[current_genome.current_mutation_index..],
+                            mutations,
+                            mpos,
+                        );
+                        offspring_mutations.push(*k);
+                        last_mpos = Some(mpos);
+                    }
                     true
                 } else {
                     false
@@ -265,14 +298,34 @@ mod test_create_offspring_genome {
         let stop = forrustts::Position::new_valid(100000);
         let makepos = rand::distributions::Uniform::new(start, stop);
 
-        let mut mutations = vec![];
+        let mut mutations: Vec<Mutation> = vec![];
         let mut haploid_genomes = vec![];
-        for _ in 0..(nmuts1 + nmuts2) {
-            let position = rng.sample(makepos);
+        for _ in 0..nmuts1 {
+            let mut position = rng.sample(makepos);
+            while haploid_genomes
+                .iter()
+                .any(|k| mutations[*k as usize].position() == position)
+            {
+                position = rng.sample(makepos);
+            }
             let m = Mutation::new(position, vec![0.1], 0.into());
             haploid_genomes.push(mutations.len() as u32);
             mutations.push(m);
         }
+        for _ in 0..nmuts2 {
+            let mut position = rng.sample(makepos);
+            while haploid_genomes
+                .iter()
+                .skip(nmuts1)
+                .any(|k| mutations[*k as usize].position() == position)
+            {
+                position = rng.sample(makepos);
+            }
+            let m = Mutation::new(position, vec![0.1], 0.into());
+            haploid_genomes.push(mutations.len() as u32);
+            mutations.push(m);
+        }
+        assert_eq!(haploid_genomes.len(), nmuts1 + nmuts2);
 
         let mut new_mutations = vec![];
         for _ in 0..(num_new_mutations) {
@@ -304,6 +357,21 @@ mod test_create_offspring_genome {
                 .position()
                 .cmp(&mutations[*j as usize].position())
         });
+
+        // RULE: a genome can only contain a single mutation
+        // at a given position:
+        for (i, j) in [(0, nmuts1), (nmuts1, nmuts1 + nmuts2)] {
+            let s = &haploid_genomes[i..j];
+            for k in s {
+                let pos = mutations[*k as usize].position();
+                assert_eq!(
+                    s.iter()
+                        .filter(|k| mutations[**k as usize].position() == pos)
+                        .count(),
+                    1
+                );
+            }
+        }
         (mutations, haploid_genomes, new_mutations, breakpoints)
     }
 
@@ -347,47 +415,85 @@ mod test_create_offspring_genome {
         breakpoints: &[Breakpoint],
         new_mutations: &[u32],
     ) -> Vec<u32> {
-        let mut kept_breakpoints = vec![];
-        for b in breakpoints.iter() {
-            let x = breakpoints.iter().filter(|&i| b == i).count();
-            if x % 2 != 0 {
-                kept_breakpoints.push(*b);
-            }
-        }
+        //let mut kept_breakpoints = vec![];
+        //for b in breakpoints.iter() {
+        //    let x = breakpoints.iter().filter(|&i| b == i).count();
+        //    if x % 2 != 0 {
+        //        kept_breakpoints.push(*b);
+        //    }
+        //}
         let (mut parent1_genome, mut parent2_genome) = parents;
         let mut lastpos = Position::new_valid(0);
-        let mut output = vec![];
+        let mut output = Vec::<u32>::new();
 
-        for b in kept_breakpoints.iter() {
-            let pos = match b {
-                Breakpoint::Crossover(x) => x,
-                Breakpoint::IndependentAssortment(x) => x,
-                _ => unimplemented!("bad"),
-            };
-            parent1_genome
+        let mut first = 0;
+        let mut second = 1;
+        for b in breakpoints.iter() {
+            let pos = Position::from(*b);
+            let before = parent1_genome
                 .mutations
                 .iter()
-                .filter(|&k| {
-                    mutations[*k as usize].position() >= lastpos
-                        && mutations[*k as usize].position() < *pos
-                })
-                .for_each(|a| output.push(*a));
-            lastpos = *pos;
+                .filter(|&k| mutations[*k as usize].position() < lastpos)
+                .count();
+            let until = parent1_genome
+                .mutations
+                .iter()
+                .skip(before)
+                .filter(|&k| mutations[*k as usize].position() < pos)
+                .count();
+            for i in &parent1_genome.mutations[before..before + until] {
+                output.push(*i);
+            }
+            // parent1_genome
+            //     .mutations
+            //     .iter()
+            //     .filter(|&k| {
+            //         mutations[*k as usize].position() >= lastpos
+            //             && mutations[*k as usize].position() < pos
+            //     })
+            //     .for_each(|a| {
+            //         println!("adding {:?}", mutations[*a as usize].position());
+            //         output.push(*a)
+            //     });
+            lastpos = pos;
             std::mem::swap(&mut parent1_genome, &mut parent2_genome);
+            std::mem::swap(&mut first, &mut second);
         }
         parent1_genome
             .mutations
             .iter()
             .filter(|&k| mutations[*k as usize].position() >= lastpos)
             .for_each(|a| output.push(*a));
+        let mut last_mutation_position: Option<Position> = None;
         for m in new_mutations {
-            output.push(*m);
+            let pos = mutations[*m as usize].position();
+            let skip = match last_mutation_position {
+                None => false,
+                Some(p) => p == pos,
+            };
+            if !skip {
+                output.retain(|k| mutations[*k as usize].position() != pos);
+                output.push(*m);
+                last_mutation_position = Some(pos);
+            }
         }
         output.sort_by(|i, j| {
             mutations[*i as usize]
                 .position()
                 .cmp(&mutations[*j as usize].position())
         });
+        // RULE: we require an output genome
+        // to have at most 1 mutation at any position
+        for m in &output {
+            let pos = mutations[*m as usize].position();
+            assert_eq!(
+                output
+                    .iter()
+                    .filter(|m| mutations[**m as usize].position() == pos)
+                    .count(),
+                1
+            );
+        }
         output
     }
 
@@ -401,9 +507,23 @@ mod test_create_offspring_genome {
         rv
     }
 
-    fn run(seed: u64, nmuts1: usize, nmuts2: usize, num_new_mutations: usize, nbreakpoints: usize) {
-        let (mutations, haploid_genomes, new_mutations, breakpoints) =
-            setup(seed, nmuts1, nmuts2, num_new_mutations, nbreakpoints);
+    fn first_difference(mutations: &[Mutation], naive: &[u32], keys: &[u32]) -> Option<i64> {
+        for (i, j) in naive.iter().zip(keys.iter()) {
+            if *i != *j {
+                return Some(mutations[*i as usize].position().into());
+            }
+        }
+        None
+    }
+
+    fn run_details(
+        mutations: Vec<Mutation>,
+        haploid_genomes: Vec<u32>,
+        new_mutations: Vec<u32>,
+        breakpoints: Vec<Breakpoint>,
+        nmuts1: usize,
+        nmuts2: usize,
+    ) {
         let (parent1_genome, parent2_genome) = setup_parents(nmuts1, nmuts2, &haploid_genomes);
         assert!(parent1_genome
             .mutations
@@ -430,18 +550,36 @@ mod test_create_offspring_genome {
         assert!(naive_output
             .windows(2)
             .all(|w| mutations[w[0] as usize].position() <= mutations[w[1] as usize].position()),);
+
         assert_eq!(range.stop, offspring_genomes.len());
         assert_eq!(
             naive_output.len(),
             offspring_genomes.len(),
-            "[{:?}, {:?}] + {:?} & {:?} = {:?} and {:?}",
+            "[{:?}, {:?}] + m: {:?} & b: {:?} = {:?} and {:?}, difference = {:?}",
             keys_to_positions(&mutations, parent1_genome.mutations),
             keys_to_positions(&mutations, parent2_genome.mutations),
             keys_to_positions(&mutations, &new_mutations),
             breakpoints,
             keys_to_positions(&mutations, &naive_output),
             keys_to_positions(&mutations, &offspring_genomes),
+            first_difference(&mutations, &naive_output, &offspring_genomes),
         );
+        // FIXME: this RULE should be auto-handled if the
+        // previous assert passes
+        // RULE: we require an output genome
+        // to have at most 1 mutation at any position
+        for m in &offspring_genomes {
+            let pos = mutations[*m as usize].position();
+            assert_eq!(
+                offspring_genomes
+                    .iter()
+                    .filter(|m| mutations[**m as usize].position() == pos)
+                    .count(),
+                1,
+                "{:?}",
+                keys_to_positions(&mutations, &offspring_genomes)
+            );
+        }
         for i in &offspring_genomes {
             assert_eq!(naive_output.iter().filter(|&j| j == i).count(), 1);
         }
@@ -450,12 +588,25 @@ mod test_create_offspring_genome {
         }
     }
 
+    fn run(seed: u64, nmuts1: usize, nmuts2: usize, num_new_mutations: usize, nbreakpoints: usize) {
+        let (mutations, haploid_genomes, new_mutations, breakpoints) =
+            setup(seed, nmuts1, nmuts2, num_new_mutations, nbreakpoints);
+        run_details(
+            mutations,
+            haploid_genomes,
+            new_mutations,
+            breakpoints,
+            nmuts1,
+            nmuts2,
+        );
+    }
+
     proptest! {
         #[test]
         fn test_with_no_breakpoints(seed in 0..u64::MAX,
-                                    nmuts1 in 0..=50_usize,
-                                    nmuts2 in 0..=50_usize,
-                                    num_new_mutations in 0..50_usize,
+                                    nmuts1 in 0..=100_usize,
+                                    nmuts2 in 0..=100_usize,
+                                    num_new_mutations in 0..100_usize,
                                     )
         {
             run(seed, nmuts1, nmuts2, num_new_mutations, 0);
@@ -463,10 +614,22 @@ mod test_create_offspring_genome {
 
         #[test]
         fn test_with_breakpoints(seed in 0..u64::MAX,
-                                    nmuts1 in 0..=50_usize,
-                                    nmuts2 in 0..=50_usize,
-                                    num_new_mutations in 0..50_usize,
-                                    nbreakpoints in 0..25_usize
+                                    nmuts1 in 0..=100_usize,
+                                    nmuts2 in 0..=100_usize,
+                                    num_new_mutations in 0..100_usize,
+                                    nbreakpoints in 0..100_usize
+                                    )
+        {
+            run(seed, nmuts1, nmuts2, num_new_mutations, nbreakpoints);
+        }
+
+        #[test]
+        #[ignore]
+        fn test_with_breakpoints_big(seed in 0..u64::MAX,
+                                    nmuts1 in 1000..=2000_usize,
+                                    nmuts2 in 1000..=2000_usize,
+                                    num_new_mutations in 100..500_usize,
+                                    nbreakpoints in 100..500_usize
                                     )
         {
             run(seed, nmuts1, nmuts2, num_new_mutations, nbreakpoints);
@@ -535,5 +698,114 @@ mod test_create_offspring_genome {
         let num_new_mutations = 0;
         let nbreakpoints = 4;
         run(seed, nmuts1, nmuts2, num_new_mutations, nbreakpoints);
+    }
+
+    #[test]
+    fn proptest_regression_7() {
+        let seed = 3603474712281167398;
+        let nmuts1 = 73;
+        let nmuts2 = 59;
+        let num_new_mutations = 76;
+        let nbreakpoints = 27;
+        run(seed, nmuts1, nmuts2, num_new_mutations, nbreakpoints);
+    }
+
+    #[test]
+    fn proptest_regression_8() {
+        let seed = 1935269182797838839;
+        let nmuts1 = 34;
+        let nmuts2 = 40;
+        let num_new_mutations = 88;
+        let nbreakpoints = 67;
+        run(seed, nmuts1, nmuts2, num_new_mutations, nbreakpoints);
+    }
+
+    #[test]
+    fn test_multiple_mutations_at_same_site() {
+        let mutations = vec![
+            Mutation::new(5_i64.try_into().unwrap(), vec![], 0.into()),
+            Mutation::new(5_i64.try_into().unwrap(), vec![], 0.into()),
+            Mutation::new(5_i64.try_into().unwrap(), vec![], 0.into()),
+        ];
+
+        for i in [vec![0, 1, 2], vec![1, 0, 2], vec![2, 0, 1]] {
+            let new_mutations = i.clone();
+
+            // make sure our existing thing works
+            run_details(
+                mutations.clone(),
+                vec![],
+                new_mutations.clone(),
+                vec![],
+                0,
+                0,
+            );
+
+            let haploid_genomes = vec![];
+            let (parent1_genome, parent2_genome) = setup_parents(0, 0, &haploid_genomes);
+            let mut output = vec![];
+
+            generate_offspring_genome(
+                (parent1_genome, parent2_genome),
+                &mutations,
+                new_mutations,
+                &[],
+                &mut output,
+            );
+            assert_eq!(output.len(), 1);
+            assert_eq!(output[0], i[0]);
+        }
+    }
+
+    // NOTE: this test will fail if we move to the
+    // simpler implementation of deduplicate_input_mutations.
+    // See comments in that function.
+    #[test]
+    fn test_multiple_mutations_at_same_site_replace() {
+        let mutations = vec![
+            // "new mutations"
+            Mutation::new(5_i64.try_into().unwrap(), vec![], 0.into()),
+            Mutation::new(5_i64.try_into().unwrap(), vec![], 0.into()),
+            Mutation::new(5_i64.try_into().unwrap(), vec![], 0.into()),
+            // pre-existing mutations
+            Mutation::new(5_i64.try_into().unwrap(), vec![], 0.into()),
+            Mutation::new(5_i64.try_into().unwrap(), vec![], 0.into()),
+        ];
+
+        for i in [vec![0, 1, 2], vec![1, 0, 2], vec![2, 0, 1]] {
+            for haploid_genomes in [vec![3], vec![3, 4]] {
+                let new_mutations = i.clone();
+
+                // make sure our existing thing works
+                run_details(
+                    mutations.clone(),
+                    vec![],
+                    new_mutations.clone(),
+                    vec![],
+                    0,
+                    0,
+                );
+
+                let (parent1_genome, parent2_genome) =
+                    setup_parents(haploid_genomes.len(), 0, &haploid_genomes);
+                let mut output = vec![];
+
+                generate_offspring_genome(
+                    (parent1_genome, parent2_genome),
+                    &mutations,
+                    new_mutations.clone(),
+                    &[],
+                    &mut output,
+                );
+                assert_eq!(output.len(), 1);
+                assert_eq!(output[0], i[0]);
+                for m in new_mutations.iter().skip(1) {
+                    assert!(!output.contains(m));
+                }
+                for m in [3, 4] {
+                    assert!(!output.contains(&m));
+                }
+            }
+        }
     }
 }

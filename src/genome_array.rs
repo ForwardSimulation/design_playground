@@ -317,8 +317,8 @@ pub fn evolve_pop(params: SimParams, genetic_map: GeneticMap) -> Option<DiploidP
     let mut offspring_genomes = HaploidGenomes::default();
     offspring_genomes.mutations.reserve(1000);
     let mut offspring = vec![];
+    let mut queue: Vec<usize> = vec![];
     for generation in 0..params.num_generations {
-        let mut queue = pop.mutation_recycling();
         for _ in 0..params.num_individuals {
             let offspring_genome = generate_offspring(
                 generation,
@@ -336,15 +336,18 @@ pub fn evolve_pop(params: SimParams, genetic_map: GeneticMap) -> Option<DiploidP
 
         std::mem::swap(&mut pop.individuals, &mut offspring);
         offspring.clear();
-        pop.count_mutations();
+        if generation % params.gcinterval == 0 {
+            pop.count_mutations();
 
-        if fixation_removal_check(
-            &pop.mutation_counts,
-            2 * params.num_individuals,
-            &mut pop.genomes,
-        ) {
-            set_fixation_counts_to_zero(2 * params.num_individuals, &mut pop.mutation_counts);
-        };
+            if fixation_removal_check(
+                &pop.mutation_counts,
+                2 * params.num_individuals,
+                &mut pop.genomes,
+            ) {
+                set_fixation_counts_to_zero(2 * params.num_individuals, &mut pop.mutation_counts);
+            };
+            queue = pop.mutation_recycling();
+        }
     }
     Some(pop)
 }

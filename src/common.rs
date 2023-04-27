@@ -16,6 +16,8 @@ pub struct SimParams {
     pub mutation_rate: f64,
     #[arg(short, long = "r")]
     pub recrate: f64,
+    #[arg(short, long = "gc", default_value = "1")]
+    pub gcinterval: u32,
 }
 
 impl SimParams {

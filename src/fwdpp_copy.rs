@@ -261,12 +261,12 @@ pub fn evolve_pop(params: SimParams, genetic_map: GeneticMap) -> Option<DiploidP
     //let mut parent_haplotype_map = vec![];
     let mut offspring: Vec<DiploidGenome> = vec![];
     let mut temporary_mutations = vec![];
+    let mut queue: Vec<usize> = vec![];
     for generation in 0..params.num_generations {
         let mut genome_queue = make_haploid_genome_queue(&pop.haplotypes);
         for g in &mut pop.haplotypes {
             g.count = 0;
         }
-        let mut queue = pop.mutation_recycling();
         for _ in 0..params.num_individuals {
             // Pick two parents
             let parent1 = rng.sample(parent_picker);
@@ -336,19 +336,23 @@ pub fn evolve_pop(params: SimParams, genetic_map: GeneticMap) -> Option<DiploidP
             offspring.push(DiploidGenome { first, second });
         }
         std::mem::swap(&mut pop.individuals, &mut offspring);
-        //for i in &pop.individuals {
-        //    assert!(pop.haplotypes[i.first].count > 0);
-        //    assert!(pop.haplotypes[i.second].count > 0);
-        //}
-        pop.count_mutations();
-        if remove_fixations_from_extant_genomes(
-            2 * params.num_individuals,
-            &pop.mutation_counts,
-            &mut pop.haplotypes,
-        ) {
-            set_fixation_counts_to_zero(2 * params.num_individuals, &mut pop.mutation_counts);
-        }
         offspring.clear();
+
+        // If we have this at the top of a generation,
+        // memory use grows w/o bounds. This growth
+        // is likely a symptom of poor design that
+        // we may work out later.
+        if generation % params.gcinterval == 0 {
+            pop.count_mutations();
+            if remove_fixations_from_extant_genomes(
+                2 * params.num_individuals,
+                &pop.mutation_counts,
+                &mut pop.haplotypes,
+            ) {
+                set_fixation_counts_to_zero(2 * params.num_individuals, &mut pop.mutation_counts);
+            }
+            queue = pop.mutation_recycling();
+        }
     }
     Some(pop)
 }

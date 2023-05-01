@@ -25,6 +25,22 @@ struct Genomes {
     stops: Vec<usize>,  // One past last chunk such that a genome is chunks[starts[i]..stops[i]]
 }
 
+impl Genomes {}
+
+#[cfg(test)]
+mod development_tests {
+    use super::Genomes;
+
+    #[test]
+    fn add_mutations() {
+        let mut genomes = Genomes {
+            chunks: vec![],
+            starts: vec![],
+            stops: vec![],
+        };
+    }
+}
+
 #[cfg(test)]
 mod sinful_tests {
     use std::num::NonZeroU32;

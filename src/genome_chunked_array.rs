@@ -55,6 +55,10 @@ impl Genomes {
         assert_eq!(self.starts.len(), self.stops.len());
         self.starts.is_empty()
     }
+
+    fn genome(&self, index: usize) -> &[u32] {
+        &self.chunks[index * CHUNK_SIZE..index * CHUNK_SIZE + CHUNK_SIZE]
+    }
 }
 
 // What we really need:
@@ -73,9 +77,18 @@ impl Genomes {
 // 4. Etc..
 fn generate_offspring_genome(
     mutation_keys: &[u32], // The indexes of the new mutations
-    genome: usize,         // The index of the genome that will "get" the new mutations
-    genomes: &mut Genomes, // The output
+    // NOTE: we are already bowing
+    // to the borrow checker:
+    // we cannot have parental/offspring
+    // genomes in the same container.
+    // Do "chunks" and "genomes" need to
+    // be in the same struct?
+    parents: (&[u32], &[u32]),            // parental genomes
+    mutation_chunks: &mut MutationChunks, // Output chunks
+    genomes: &mut Genomes,                // Output genomes
 ) {
+    let parent_one_genome = parents.0;
+    let parent_two_genome = parents.1;
     if genomes.is_empty() {
         genomes.starts.push(0);
         genomes.stops.push(CHUNK_SIZE);
@@ -100,8 +113,9 @@ mod development_tests {
             stops: vec![],
         };
 
+        let mut chunks = MutationChunks::default();
         let mutations = [1, 2, 3];
-        generate_offspring_genome(&mutations, 0, &mut genomes);
+        generate_offspring_genome(&mutations, (&[], &[]), &mut chunks, &mut genomes);
         assert_eq!(genomes.starts.len(), 1);
         assert_eq!(genomes.stops.len(), 1);
         assert_eq!(genomes.stops[0] - genomes.starts[0], CHUNK_SIZE);

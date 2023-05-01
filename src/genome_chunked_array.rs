@@ -1,6 +1,6 @@
-// Mutations will be stored in blocks of 8
+// Mutations will be stored in blocks of 64
 // indexes
-static CHUNK_SIZE: u32 = 8;
+static CHUNK_SIZE: u32 = 64;
 
 struct Chunk {
     start: u32,

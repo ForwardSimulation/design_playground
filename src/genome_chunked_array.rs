@@ -9,13 +9,13 @@ struct Chunk {
 
 struct MutationChunks {
     mutations: Vec<u32>,
-    chunks: Vec<rclite::Rc<Chunk>>,
+    chunks: Vec<Chunk>,
 }
 
-struct Individuals {
-    chunks: Vec<rclite::Rc<Chunk>>,
-    starts: Vec<usize>,
-    stops: Vec<usize>,
+struct Genomes {
+    chunks: Vec<u32>,   // each genome is a range of chunk indexes
+    starts: Vec<usize>, // For each genome, where is its first chunk?
+    stops: Vec<usize>,  // One past last chunk such that a genome is chunks[starts[i]..stops[i]]
 }
 
 #[cfg(test)]

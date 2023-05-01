@@ -2,7 +2,7 @@ use crate::common::Mutation;
 
 // Mutations will be stored in blocks of 64
 // indexes
-const CHUNK_SIZE: u32 = 64;
+const CHUNK_SIZE: usize = 64;
 
 struct Chunk {
     start: u32,
@@ -16,7 +16,7 @@ struct MutationChunks {
 }
 
 impl MutationChunks {
-    const CHUNK_SIZE: u32 = CHUNK_SIZE; // Maybe this should be here?
+    const CHUNK_SIZE: usize = CHUNK_SIZE; // Maybe this should be here?
 }
 
 struct Genomes {
@@ -25,19 +25,39 @@ struct Genomes {
     stops: Vec<usize>,  // One past last chunk such that a genome is chunks[starts[i]..stops[i]]
 }
 
+// What we really need:
+// 1. Do we need a new chunk?
+// 2. If yes, push (or recycle) one.
+// 3. If no, fill what we can of the current (last?) chunk.
+fn add_mutations(mutation_keys: &[u32], genome: usize, genomes: &mut Genomes) {
+    genomes.starts.push(0);
+    genomes.stops.push(CHUNK_SIZE);
+    genomes.chunks.extend_from_slice(mutation_keys);
+    for _ in 0..CHUNK_SIZE - mutation_keys.len() {
+        genomes.chunks.push(u32::MAX);
+    }
+}
+
 impl Genomes {}
 
 #[cfg(test)]
 mod development_tests {
-    use super::Genomes;
+    use super::*;
 
     #[test]
-    fn add_mutations() {
+    fn test_add_mutations() {
         let mut genomes = Genomes {
             chunks: vec![],
             starts: vec![],
             stops: vec![],
         };
+
+        let mutations = [1, 2, 3];
+        add_mutations(&mutations, 0, &mut genomes);
+        assert_eq!(genomes.starts.len(), 1);
+        assert_eq!(genomes.stops.len(), 1);
+        assert_eq!(genomes.stops[0] - genomes.starts[0], CHUNK_SIZE);
+        assert_eq!(genomes.chunks.len(), CHUNK_SIZE);
     }
 }
 

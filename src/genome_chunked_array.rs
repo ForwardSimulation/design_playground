@@ -1,3 +1,5 @@
+use crate::common::Mutation;
+
 // Mutations will be stored in blocks of 64
 // indexes
 static CHUNK_SIZE: u32 = 64;
@@ -8,8 +10,9 @@ struct Chunk {
 }
 
 struct MutationChunks {
-    mutations: Vec<u32>,
-    chunks: Vec<Chunk>,
+    mutations: Vec<u32>, // indexes into mutation vector.
+                         // u32::MAX is treated as a NULL "sentinel"
+    chunks: Vec<Chunk>,  // Is this needed?
 }
 
 struct Genomes {
@@ -38,5 +41,12 @@ mod sinful_tests {
             std::mem::size_of::<Option<NonZeroU32>>(),
             std::mem::size_of::<NonZeroU32>()
         );
+    }
+
+    #[test]
+    fn test_non_zero_int_types() {
+        let x = NonZeroU32::new(1).unwrap();
+        let y = x.checked_add(1).unwrap();
+        assert_eq!(y, 2.try_into().unwrap());
     }
 }

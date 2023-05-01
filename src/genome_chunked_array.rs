@@ -9,14 +9,39 @@ struct Chunk {
     stop: u32,
 }
 
+#[derive(Default)]
 struct MutationChunks {
     mutations: Vec<u32>, // indexes into mutation vector.
     // u32::MAX is treated as a NULL "sentinel"
     chunks: Vec<Chunk>, // Is this needed?
+    counts: Vec<u32>,
+    queue: Vec<usize>,
 }
 
 impl MutationChunks {
     const CHUNK_SIZE: usize = CHUNK_SIZE; // Maybe this should be here?
+
+    fn new_chunk_mut(&mut self) -> (usize, &mut [u32]) {
+        assert_eq!(self.mutations.len() / Self::CHUNK_SIZE, 0);
+
+        match self.queue.pop() {
+            Some(index) => {
+                let mslice =
+                    &mut self.mutations[index * CHUNK_SIZE..index * CHUNK_SIZE + CHUNK_SIZE];
+                mslice.fill(u32::MAX);
+                (index, mslice)
+            }
+            None => {
+                let id = self.mutations.len() / Self::CHUNK_SIZE;
+                self.mutations
+                    .resize(self.mutations.len() + Self::CHUNK_SIZE, u32::MAX);
+                (
+                    id,
+                    &mut self.mutations[id * CHUNK_SIZE..id * CHUNK_SIZE + CHUNK_SIZE],
+                )
+            }
+        }
+    }
 }
 
 struct Genomes {
@@ -46,7 +71,7 @@ impl Genomes {
 //    has to be part of the conversation.
 // 3. Need partition searching to copy parental stuff over.
 // 4. Etc..
-fn add_mutations(
+fn generate_offspring_genome(
     mutation_keys: &[u32], // The indexes of the new mutations
     genome: usize,         // The index of the genome that will "get" the new mutations
     genomes: &mut Genomes, // The output
@@ -76,7 +101,7 @@ mod development_tests {
         };
 
         let mutations = [1, 2, 3];
-        add_mutations(&mutations, 0, &mut genomes);
+        generate_offspring_genome(&mutations, 0, &mut genomes);
         assert_eq!(genomes.starts.len(), 1);
         assert_eq!(genomes.stops.len(), 1);
         assert_eq!(genomes.stops[0] - genomes.starts[0], CHUNK_SIZE);

@@ -2,7 +2,7 @@ use crate::common::Mutation;
 
 // Mutations will be stored in blocks of 64
 // indexes
-static CHUNK_SIZE: u32 = 64;
+const CHUNK_SIZE: u32 = 64;
 
 struct Chunk {
     start: u32,
@@ -11,8 +11,12 @@ struct Chunk {
 
 struct MutationChunks {
     mutations: Vec<u32>, // indexes into mutation vector.
-                         // u32::MAX is treated as a NULL "sentinel"
-    chunks: Vec<Chunk>,  // Is this needed?
+    // u32::MAX is treated as a NULL "sentinel"
+    chunks: Vec<Chunk>, // Is this needed?
+}
+
+impl MutationChunks {
+    const CHUNK_SIZE: u32 = CHUNK_SIZE; // Maybe this should be here?
 }
 
 struct Genomes {

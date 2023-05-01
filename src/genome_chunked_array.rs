@@ -25,16 +25,39 @@ struct Genomes {
     stops: Vec<usize>,  // One past last chunk such that a genome is chunks[starts[i]..stops[i]]
 }
 
+impl Genomes {
+    fn is_empty(&self) -> bool {
+        assert_eq!(self.starts.len(), self.stops.len());
+        self.starts.is_empty()
+    }
+}
+
 // What we really need:
 // 1. Do we need a new chunk?
 // 2. If yes, push (or recycle) one.
 // 3. If no, fill what we can of the current (last?) chunk.
-fn add_mutations(mutation_keys: &[u32], genome: usize, genomes: &mut Genomes) {
-    genomes.starts.push(0);
-    genomes.stops.push(CHUNK_SIZE);
-    genomes.chunks.extend_from_slice(mutation_keys);
-    for _ in 0..CHUNK_SIZE - mutation_keys.len() {
-        genomes.chunks.push(u32::MAX);
+// Actually, a lot of this is wrong:
+// 1. We don't know what a "genome" is, yet, in memory.
+// 2. So, are we adding to a genome, updating an existing
+//    genome, or what?
+// So what we actually really need is:
+// 1. To know the parental genome identifiers
+// 2. To be able to get new chunks, which means that MutationChunks
+//    has to be part of the conversation.
+// 3. Need partition searching to copy parental stuff over.
+// 4. Etc..
+fn add_mutations(
+    mutation_keys: &[u32], // The indexes of the new mutations
+    genome: usize,         // The index of the genome that will "get" the new mutations
+    genomes: &mut Genomes, // The output
+) {
+    if genomes.is_empty() {
+        genomes.starts.push(0);
+        genomes.stops.push(CHUNK_SIZE);
+        genomes.chunks.extend_from_slice(mutation_keys);
+        for _ in 0..CHUNK_SIZE - mutation_keys.len() {
+            genomes.chunks.push(u32::MAX);
+        }
     }
 }
 

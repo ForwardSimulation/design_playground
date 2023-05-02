@@ -37,9 +37,16 @@ mod pseudocode {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
 struct Chunk {
-    start: u32,
-    stop: u32,
+    start: usize,
+    stop: usize,
+}
+
+impl Chunk {
+    fn new(start: usize, stop: usize) -> Self {
+        Self { start, stop }
+    }
 }
 
 #[derive(Default)]
@@ -54,27 +61,20 @@ pub struct MutationChunks {
 impl MutationChunks {
     const CHUNK_SIZE: usize = CHUNK_SIZE; // Maybe this should be here?
 
-    pub fn chunk(&self, at: usize) -> &[u32; Self::CHUNK_SIZE] {
-        let s = &self.mutations[at * Self::CHUNK_SIZE..at * Self::CHUNK_SIZE + Self::CHUNK_SIZE];
-        s.try_into().unwrap()
-    }
-
-    pub fn chunk_mut(&mut self, at: usize) -> &mut [u32; Self::CHUNK_SIZE] {
-        let s =
-            &mut self.mutations[at * Self::CHUNK_SIZE..at * Self::CHUNK_SIZE + Self::CHUNK_SIZE];
-        s.try_into().unwrap()
+    fn chunk(&self, at: usize) -> Chunk {
+        Chunk::new(at * Self::CHUNK_SIZE, at * Self::CHUNK_SIZE + CHUNK_SIZE)
     }
 
     // The None path may not be the most efficient
-    fn new_chunk_mut(&mut self) -> (usize, &mut [u32; Self::CHUNK_SIZE]) {
+    fn add_new_chunk(&mut self) -> (usize, Chunk) {
         assert_eq!(self.mutations.len() / Self::CHUNK_SIZE, 0);
         match self.queue.pop() {
-            Some(index) => (index, self.chunk_mut(index)),
+            Some(index) => (index, self.chunk(index)),
             None => {
                 let id = self.mutations.len() / Self::CHUNK_SIZE;
                 self.mutations
                     .resize(self.mutations.len() + Self::CHUNK_SIZE, u32::MAX);
-                (id, self.chunk_mut(id))
+                (id, self.chunk(id))
             }
         }
     }
@@ -97,12 +97,12 @@ impl Genomes {
     }
 }
 
-fn update_offspring_chunks<'c>(
+fn update_offspring_chunks(
     offpsring_chunk_index: usize,
     offspring_genomes: &mut Genomes,
-    offspring_mutation_chunks: &'c mut MutationChunks,
-    current_chunk: &'c mut [u32; CHUNK_SIZE],
-) -> (usize, &'c mut [u32; CHUNK_SIZE]) {
+    offspring_mutation_chunks: &mut MutationChunks,
+    current_chunk: Chunk,
+) -> (usize, Chunk) {
     (offpsring_chunk_index, current_chunk)
 }
 
@@ -137,14 +137,13 @@ fn generate_offspring_genome(
     let parent_one_genome = parents.0;
 
     let mut last_parent_index = 0_usize;
-    let (mut index, mut chunk) = offspring_mutation_chunks.new_chunk_mut();
+    let (mut index, mut chunk) = offspring_mutation_chunks.add_new_chunk();
     for m in new_mutation_keys {
         // FIXME: here, we want to be skipping past chunks
         // whose last position is < mutations[m].position()
         let p = parent_one_genome.partition_point(|x| true);
 
-        (index, chunk) =
-            update_offspring_chunks(index, genomes, offspring_mutation_chunks, &mut chunk);
+        (index, chunk) = update_offspring_chunks(index, genomes, offspring_mutation_chunks, chunk);
     }
 }
 
@@ -190,22 +189,6 @@ mod sinful_tests {
     use std::num::NonZeroU32;
 
     use super::*;
-
-    #[test]
-    fn test_sizes() {
-        assert_eq!(
-            std::mem::size_of::<Chunk>(),
-            std::mem::size_of::<rclite::Rc<Chunk>>()
-        );
-        assert_eq!(
-            std::mem::size_of::<Chunk>(),
-            std::mem::size_of::<Option<rclite::Rc<Chunk>>>()
-        );
-        assert_eq!(
-            std::mem::size_of::<Option<NonZeroU32>>(),
-            std::mem::size_of::<NonZeroU32>()
-        );
-    }
 
     #[test]
     fn test_non_zero_int_types() {

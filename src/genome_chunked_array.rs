@@ -97,6 +97,11 @@ impl Genomes {
     }
 }
 
+// FIXME: this info is incomplete:
+// * We don't know if we are writing into
+//   a partially-filled chunk.
+// * We don't know if we are returning an empty
+//   or partially-filled chunk
 fn update_offspring_chunks(
     offpsring_chunk_index: usize,
     offspring_genomes: &mut Genomes,

@@ -54,20 +54,20 @@ pub struct MutationChunks {
 impl MutationChunks {
     const CHUNK_SIZE: usize = CHUNK_SIZE; // Maybe this should be here?
 
-    pub fn chunk(&self, at: usize) -> &[u32; CHUNK_SIZE] {
-        let s = &self.mutations[at * CHUNK_SIZE..at * CHUNK_SIZE + CHUNK_SIZE];
+    pub fn chunk(&self, at: usize) -> &[u32; Self::CHUNK_SIZE] {
+        let s = &self.mutations[at * Self::CHUNK_SIZE..at * Self::CHUNK_SIZE + Self::CHUNK_SIZE];
         s.try_into().unwrap()
     }
 
-    pub fn chunk_mut(&mut self, at: usize) -> &mut [u32; CHUNK_SIZE] {
-        let s = &mut self.mutations[at * CHUNK_SIZE..at * CHUNK_SIZE + CHUNK_SIZE];
+    pub fn chunk_mut(&mut self, at: usize) -> &mut [u32; Self::CHUNK_SIZE] {
+        let s =
+            &mut self.mutations[at * Self::CHUNK_SIZE..at * Self::CHUNK_SIZE + Self::CHUNK_SIZE];
         s.try_into().unwrap()
     }
 
     // The None path may not be the most efficient
-    fn new_chunk_mut(&mut self) -> (usize, &mut [u32; CHUNK_SIZE]) {
+    fn new_chunk_mut(&mut self) -> (usize, &mut [u32; Self::CHUNK_SIZE]) {
         assert_eq!(self.mutations.len() / Self::CHUNK_SIZE, 0);
-
         match self.queue.pop() {
             Some(index) => (index, self.chunk_mut(index)),
             None => {

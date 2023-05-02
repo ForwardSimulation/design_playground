@@ -97,6 +97,15 @@ impl Genomes {
     }
 }
 
+fn update_offspring_chunks<'c>(
+    offpsring_chunk_index: usize,
+    offspring_genomes: &mut Genomes,
+    offspring_mutation_chunks: &'c mut MutationChunks,
+    current_chunk: &'c mut [u32; CHUNK_SIZE],
+) -> (usize, &'c mut [u32; CHUNK_SIZE]) {
+    (offpsring_chunk_index, current_chunk)
+}
+
 // What we really need:
 // 1. Do we need a new chunk?
 // 2. If yes, push (or recycle) one.
@@ -126,14 +135,16 @@ fn generate_offspring_genome(
     genomes: &mut Genomes,                   // Output genomes
 ) {
     let parent_one_genome = parents.0;
-    let parent_two_genome = parents.1;
-    if genomes.is_empty() {
-        genomes.starts.push(0);
-        genomes.stops.push(CHUNK_SIZE);
-        genomes.chunks.extend_from_slice(new_mutation_keys);
-        for _ in 0..CHUNK_SIZE - new_mutation_keys.len() {
-            genomes.chunks.push(u32::MAX);
-        }
+
+    let mut last_parent_index = 0_usize;
+    let (mut index, mut chunk) = offspring_mutation_chunks.new_chunk_mut();
+    for m in new_mutation_keys {
+        // FIXME: here, we want to be skipping past chunks
+        // whose last position is < mutations[m].position()
+        let p = parent_one_genome.partition_point(|x| true);
+
+        (index, chunk) =
+            update_offspring_chunks(index, genomes, offspring_mutation_chunks, &mut chunk);
     }
 }
 

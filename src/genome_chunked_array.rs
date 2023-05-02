@@ -112,24 +112,26 @@ impl Genomes {
 // 3. Need partition searching to copy parental stuff over.
 // 4. Etc..
 fn generate_offspring_genome(
-    mutation_keys: &[u32], // The indexes of the new mutations
     // NOTE: we are already bowing
     // to the borrow checker:
     // we cannot have parental/offspring
     // genomes in the same container.
     // Do "chunks" and "genomes" need to
     // be in the same struct?
-    parents: (&[u32], &[u32]),            // parental genomes
-    mutation_chunks: &mut MutationChunks, // Output chunks
-    genomes: &mut Genomes,                // Output genomes
+    parents: (&[u32], &[u32]), // parental genomes
+    mutations: &[Mutation],
+    parent_mutation_chunks: &MutationChunks, // Output chunks
+    new_mutation_keys: &[u32],               // The indexes of the new mutations
+    offspring_mutation_chunks: &mut MutationChunks, // Output chunks
+    genomes: &mut Genomes,                   // Output genomes
 ) {
     let parent_one_genome = parents.0;
     let parent_two_genome = parents.1;
     if genomes.is_empty() {
         genomes.starts.push(0);
         genomes.stops.push(CHUNK_SIZE);
-        genomes.chunks.extend_from_slice(mutation_keys);
-        for _ in 0..CHUNK_SIZE - mutation_keys.len() {
+        genomes.chunks.extend_from_slice(new_mutation_keys);
+        for _ in 0..CHUNK_SIZE - new_mutation_keys.len() {
             genomes.chunks.push(u32::MAX);
         }
     }
@@ -149,9 +151,22 @@ mod development_tests {
             stops: vec![],
         };
 
+        let mutations = vec![
+            Mutation::new(0.try_into().unwrap(), vec![], 0.into()),
+            Mutation::new(1.try_into().unwrap(), vec![], 0.into()),
+            Mutation::new(1.try_into().unwrap(), vec![], 0.into()),
+        ];
+        let pchunks = MutationChunks::default();
         let mut chunks = MutationChunks::default();
-        let mutations = [1, 2, 3];
-        generate_offspring_genome(&mutations, (&[], &[]), &mut chunks, &mut genomes);
+        let new_mutations = [0, 1, 2];
+        generate_offspring_genome(
+            (&[], &[]),
+            &mutations,
+            &pchunks,
+            &new_mutations,
+            &mut chunks,
+            &mut genomes,
+        );
         assert_eq!(genomes.starts.len(), 1);
         assert_eq!(genomes.stops.len(), 1);
         assert_eq!(genomes.stops[0] - genomes.starts[0], CHUNK_SIZE);

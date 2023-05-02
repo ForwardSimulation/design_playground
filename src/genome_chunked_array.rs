@@ -64,24 +64,17 @@ impl MutationChunks {
         s.try_into().unwrap()
     }
 
-    fn new_chunk_mut(&mut self) -> (usize, &mut [u32]) {
+    // The None path may not be the most efficient
+    fn new_chunk_mut(&mut self) -> (usize, &mut [u32; CHUNK_SIZE]) {
         assert_eq!(self.mutations.len() / Self::CHUNK_SIZE, 0);
 
         match self.queue.pop() {
-            Some(index) => {
-                let mslice =
-                    &mut self.mutations[index * CHUNK_SIZE..index * CHUNK_SIZE + CHUNK_SIZE];
-                mslice.fill(u32::MAX);
-                (index, mslice)
-            }
+            Some(index) => (index, self.chunk_mut(index)),
             None => {
                 let id = self.mutations.len() / Self::CHUNK_SIZE;
                 self.mutations
                     .resize(self.mutations.len() + Self::CHUNK_SIZE, u32::MAX);
-                (
-                    id,
-                    &mut self.mutations[id * CHUNK_SIZE..id * CHUNK_SIZE + CHUNK_SIZE],
-                )
+                (id, self.chunk_mut(id))
             }
         }
     }

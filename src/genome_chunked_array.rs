@@ -139,6 +139,7 @@ fn generate_offspring_genome(
     offspring_mutation_chunks: &mut MutationChunks, // Output chunks
     genomes: &mut Genomes,                   // Output genomes
 ) {
+    todo!("this may all be wrong. for efficiency, we may need the structure to be update-in-place and not fully DoD");
     let parent_one_genome = parents.0;
 
     let mut last_parent_index = 0_usize;

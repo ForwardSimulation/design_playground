@@ -4,6 +4,39 @@ use crate::common::Mutation;
 // indexes
 const CHUNK_SIZE: usize = 64;
 
+// Pseudocode of what an OO
+// version may look like
+mod pseudocode {
+    struct Genome {
+        chunks: Vec<u32>, // indexes into DiploidPopulation::mutation_chunks::chunks
+        count: u32,
+    }
+
+    struct MutationChunk {
+        mutations: [u32; super::CHUNK_SIZE], // indexes into DiploidPopulation::mutations
+        count: u32,
+    }
+
+    impl MutationChunk {
+        fn new_empty() -> Self {
+            Self {
+                mutations: [u32::MAX; super::CHUNK_SIZE],
+                count: 0,
+            }
+        }
+    }
+
+    struct MutationChunks {
+        chunks: Vec<MutationChunk>,
+    }
+
+    struct DiploidPopulation {
+        genomes: Vec<Genome>,
+        mutation_chunks: MutationChunks,
+        mutations: Vec<super::Mutation>,
+    }
+}
+
 struct Chunk {
     start: u32,
     stop: u32,

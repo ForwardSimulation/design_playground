@@ -43,7 +43,7 @@ struct Chunk {
 }
 
 #[derive(Default)]
-struct MutationChunks {
+pub struct MutationChunks {
     mutations: Vec<u32>, // indexes into mutation vector.
     // u32::MAX is treated as a NULL "sentinel"
     chunks: Vec<Chunk>, // Is this needed?
@@ -53,6 +53,16 @@ struct MutationChunks {
 
 impl MutationChunks {
     const CHUNK_SIZE: usize = CHUNK_SIZE; // Maybe this should be here?
+
+    pub fn chunk(&self, at: usize) -> &[u32; CHUNK_SIZE] {
+        let s = &self.mutations[at * CHUNK_SIZE..at * CHUNK_SIZE + CHUNK_SIZE];
+        s.try_into().unwrap()
+    }
+
+    pub fn chunk_mut(&mut self, at: usize) -> &mut [u32; CHUNK_SIZE] {
+        let s = &mut self.mutations[at * CHUNK_SIZE..at * CHUNK_SIZE + CHUNK_SIZE];
+        s.try_into().unwrap()
+    }
 
     fn new_chunk_mut(&mut self) -> (usize, &mut [u32]) {
         assert_eq!(self.mutations.len() / Self::CHUNK_SIZE, 0);
@@ -213,5 +223,26 @@ mod sinful_tests {
         let s: &mut [i32; 64] = vs.try_into().unwrap();
         s[1] = 3;
         assert_eq!(v[10], 3);
+    }
+
+    #[test]
+    fn test_copy_free_array_from_struct() {
+        struct X {
+            x: Vec<i32>,
+        }
+
+        impl X {
+            fn chunk(&mut self) -> &mut [i32; 4] {
+                let s = &mut self.x[0..4];
+                s.try_into().unwrap()
+            }
+        }
+
+        let mut x = X {
+            x: vec![0, 1, 2, 3],
+        };
+        let c = x.chunk();
+        c[0] += 10;
+        assert_eq!(x.x[0], 10);
     }
 }

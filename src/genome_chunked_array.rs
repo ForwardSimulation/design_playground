@@ -184,4 +184,34 @@ mod sinful_tests {
         let y = x.checked_add(1).unwrap();
         assert_eq!(y, 2.try_into().unwrap());
     }
+
+    //#[test]
+    //fn test_arrayref() {
+    //    fn mod_array(x: &mut [i32; 3]) {
+    //        x[2] = 4;
+    //    }
+    //    use arrayref::array_mut_ref;
+    //    let mut x = vec![1, 2, 3];
+    //    mod_array(array_mut_ref![x, 0, 3]);
+    //    assert_eq!(x[2], 4);
+    //}
+
+    #[test]
+    fn test_slice_try_into_array() {
+        let mut v = vec![1; 64];
+        let vs = &mut v[0..32];
+        let s: &mut [i32; 32] = vs.try_into().unwrap();
+        s[10] = 2;
+        assert_eq!(v[10], 2);
+        let vs = &mut v[0..64];
+        let s: &mut [i32; 64] = vs.try_into().unwrap();
+        s[10] = 3;
+        assert_eq!(v[10], 3);
+
+        let mut v = vec![1; 256];
+        let vs = &mut v[9..9 + 64];
+        let s: &mut [i32; 64] = vs.try_into().unwrap();
+        s[1] = 3;
+        assert_eq!(v[10], 3);
+    }
 }

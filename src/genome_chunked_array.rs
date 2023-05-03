@@ -106,10 +106,12 @@ impl MutationChunks {
     }
 
     fn fill_from(&mut self, source: usize, destination: usize) {
+        assert_ne!(source, destination);
         for i in 0..self.occupancy(source) {
             self.mutation_ids[destination * CHUNK_SIZE + i as usize] =
                 self.mutation_ids[source * CHUNK_SIZE + i as usize];
         }
+        self.occupancy[destination] = self.occupancy[source];
     }
 }
 

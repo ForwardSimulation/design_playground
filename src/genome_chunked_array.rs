@@ -50,6 +50,7 @@ mod pseudocode {
     }
 }
 
+#[derive(Default)]
 struct Mutations {
     mutations: Vec<Mutation>,
     counts: Vec<u32>,
@@ -64,6 +65,7 @@ struct MutationChunks {
     occupancy: Vec<i32>,
 }
 
+#[derive(Default)]
 struct HaploidGenomes {
     mutation_chunk_ids: Vec<u32>, // each genome is a CONTIGUOUS range of chunk indexes
     starts: Vec<usize>,           // For each genome, where is its first chunk?

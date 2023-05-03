@@ -111,7 +111,7 @@ impl MutationChunks {
             self.mutation_ids[destination * CHUNK_SIZE + i as usize] =
                 self.mutation_ids[source * CHUNK_SIZE + i as usize];
         }
-        self.occupancy[destination] = self.occupancy[source];
+        self.occupancy[destination] += self.occupancy[source];
     }
 }
 

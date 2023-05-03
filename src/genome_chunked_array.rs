@@ -88,8 +88,12 @@ impl MutationChunks {
         }
     }
 
-    fn occupancy(&self, at: usize) -> i32 {
-        self.occupancy[at]
+    fn occupancy(&self, chunk: usize) -> i32 {
+        self.occupancy[chunk]
+    }
+
+    fn is_empty(&self, chunk: usize) -> bool {
+        self.occupancy(chunk) == 0
     }
 
     fn fill_queue(&mut self) {
@@ -126,7 +130,7 @@ mod test_mutation_chunks {
         let mut mc = MutationChunks::default();
         let nc = mc.new_chunk();
         assert_eq!(nc, 0);
-        assert_eq!(mc.occupancy(nc), 0);
+        assert!(mc.is_empty(nc));
         mc.fill_queue();
         let nc = mc.new_chunk();
         assert_eq!(nc, 0);

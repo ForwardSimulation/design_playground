@@ -1,3 +1,16 @@
+//! This is a first draft of storing genomes
+//! in "chunks" of a fixed length. A "chunk"
+//! is a number of mutations.
+//!
+//! For this first pass, we will only support
+//! efficient operations for non-overlapping
+//! generations. Like genome_array.rs, each
+//! new generation of genomes will be a new
+//! container. Also like genome_array, this
+//! design (probably) has efficiency issues
+//! for overlapping generations. We will deal
+//! with that later.
+
 use crate::common::Mutation;
 
 // Mutations will be stored in blocks of 64
@@ -139,7 +152,6 @@ fn generate_offspring_genome(
     offspring_mutation_chunks: &mut MutationChunks, // Output chunks
     genomes: &mut Genomes,                   // Output genomes
 ) {
-    todo!("this may all be wrong. for efficiency, we may need the structure to be update-in-place and not fully DoD");
     let parent_one_genome = parents.0;
 
     let mut last_parent_index = 0_usize;

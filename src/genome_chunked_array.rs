@@ -104,6 +104,13 @@ impl MutationChunks {
             .filter_map(|(i, c)| if c == &0 { Some(i) } else { None })
             .collect();
     }
+
+    fn fill_from(&mut self, source: usize, destination: usize) {
+        for i in 0..self.occupancy(source) {
+            self.mutation_ids[destination * CHUNK_SIZE + i as usize] =
+                self.mutation_ids[source * CHUNK_SIZE + i as usize];
+        }
+    }
 }
 
 #[derive(Default)]
@@ -116,6 +123,7 @@ struct HaploidGenomes {
 #[cfg(test)]
 mod test_mutation_chunks {
     use super::MutationChunks;
+    use super::CHUNK_SIZE;
 
     #[test]
     fn test_add_chunk() {
@@ -142,5 +150,25 @@ mod test_mutation_chunks {
         mc.fill_queue();
         let nc = mc.new_chunk();
         assert_eq!(nc, 2);
+    }
+
+    #[test]
+    fn test_fill_entire_chunk_from_another_full_chunk() {
+        let mut mc = MutationChunks::default();
+        let first = mc.new_chunk();
+        let second = mc.new_chunk();
+
+        // Make up some data
+        for i in 0..CHUNK_SIZE {
+            mc.mutation_ids[first * CHUNK_SIZE + i] = i.try_into().unwrap();
+        }
+        mc.occupancy[first] = CHUNK_SIZE as i32;
+
+        mc.fill_from(first, second);
+        let s = &mc.mutation_ids[second * CHUNK_SIZE..];
+        for i in 0..CHUNK_SIZE {
+            assert_eq!(s[i], i as u32);
+        }
+        assert_eq!(mc.occupancy(second), CHUNK_SIZE as i32);
     }
 }

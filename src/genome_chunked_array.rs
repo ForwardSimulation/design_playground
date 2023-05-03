@@ -107,6 +107,11 @@ impl MutationChunks {
 
     fn fill_from(&mut self, source: usize, destination: usize) {
         assert_ne!(source, destination);
+        // NOTE: code like this could be a perf bottleneck.
+        // We may need to get each mutable sub-slice out
+        // using .split_at_mut() and some indexing.
+        // With the slices, iterators may be helpful
+        // in dodging boundary checks.
         for i in 0..self.occupancy(source) {
             self.mutation_ids[destination * CHUNK_SIZE + i as usize] =
                 self.mutation_ids[source * CHUNK_SIZE + i as usize];

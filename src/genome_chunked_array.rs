@@ -63,6 +63,43 @@ struct MutationChunks {
     // How many valid mutation ids are in a chunk.
     // The rest must be the sentinel value u32::MAX
     occupancy: Vec<i32>,
+    // indexes where chunks have count of 0.
+    // We can use these to "reallocate" new chunks.
+    queue: Vec<usize>,
+}
+
+impl MutationChunks {
+    fn new_chunk(&mut self) -> usize {
+        match self.queue.pop() {
+            Some(index) => {
+                assert_eq!(self.counts[index], 0);
+                self.mutation_ids[index * CHUNK_SIZE..index * CHUNK_SIZE + CHUNK_SIZE]
+                    .fill(u32::MAX);
+                self.occupancy[index] = 0;
+                index
+            }
+            None => {
+                let index = self.mutation_ids.len();
+                self.mutation_ids.resize(index + CHUNK_SIZE, u32::MAX);
+                self.occupancy.push(0);
+                self.counts.push(0);
+                index / CHUNK_SIZE
+            }
+        }
+    }
+
+    fn occupancy(&self, at: usize) -> i32 {
+        self.occupancy[at]
+    }
+
+    fn fill_queue(&mut self) {
+        self.queue = self
+            .counts
+            .iter()
+            .enumerate()
+            .filter_map(|(i, c)| if c == &0 { Some(i) } else { None })
+            .collect();
+    }
 }
 
 #[derive(Default)]
@@ -70,4 +107,36 @@ struct HaploidGenomes {
     mutation_chunk_ids: Vec<u32>, // each genome is a CONTIGUOUS range of chunk indexes
     starts: Vec<usize>,           // For each genome, where is its first chunk?
     stops: Vec<usize>, // One past last chunk such that a genome is mutation_chunk_ids[starts[i]..stops[i]]
+}
+
+#[cfg(test)]
+mod test_mutation_chunks {
+    use super::MutationChunks;
+
+    #[test]
+    fn test_add_chunk() {
+        let mut mc = MutationChunks::default();
+        let nc = mc.new_chunk();
+        assert_eq!(nc, 0);
+        assert_eq!(mc.occupancy(nc), 0);
+    }
+
+    #[test]
+    fn test_recycle_chunk() {
+        let mut mc = MutationChunks::default();
+        let nc = mc.new_chunk();
+        assert_eq!(nc, 0);
+        assert_eq!(mc.occupancy(nc), 0);
+        mc.fill_queue();
+        let nc = mc.new_chunk();
+        assert_eq!(nc, 0);
+        mc.counts[0] += 1;
+        mc.fill_queue();
+        let nc = mc.new_chunk();
+        assert_eq!(nc, 1);
+        mc.counts[1] += 1;
+        mc.fill_queue();
+        let nc = mc.new_chunk();
+        assert_eq!(nc, 2);
+    }
 }

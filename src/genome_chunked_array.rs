@@ -105,6 +105,9 @@ impl MutationChunks {
             .collect();
     }
 
+
+    // Not clear that we really want this kind of logic.
+    // This fn may disappear later.
     fn fill_from(&mut self, source: usize, destination: usize) {
         assert_ne!(source, destination);
         // NOTE: code like this could be a perf bottleneck.

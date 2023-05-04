@@ -451,8 +451,11 @@ mod test_haploid_genomes {
 
         let genome = &haploid_genomes.mutation_chunk_ids
             [haploid_genomes.starts[0]..haploid_genomes.stops[0]];
-        assert_eq!(genome, &[0, 2, 4]);
+        assert_eq!(genome, &[first as u32, third as u32, fifth as u32]);
         assert_eq!(genome.len(), 3);
+        assert!(genome
+            .windows(2)
+            .all(|w| mutations[w[0] as usize].position() <= mutations[w[1] as usize].position()));
         let test_position = forrustts::Position::try_from(100).unwrap();
         let p = genome.partition_point(|&c| {
             let comp = mc.last_position(c as usize, &mutations).unwrap() < test_position;

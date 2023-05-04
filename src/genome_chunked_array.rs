@@ -174,8 +174,11 @@ fn remove_chunk_if_empty(
     };
     let f = first;
     for i in f..mutation_chunk_ids.len() {
-        if !mutation_chunks.is_empty(i) {
-            mutation_chunk_ids[first] = mutation_chunk_ids[i];
+        if !mutation_chunks.is_empty(mutation_chunk_ids[i] as usize) {
+            mutation_chunk_ids.swap(first, i);
+            //let temp = mutation_chunk_ids[first];
+            //mutation_chunk_ids[first] = mutation_chunk_ids[i];
+            //mutation_chunk_ids[i] = temp;
             first += 1;
         }
     }
@@ -383,6 +386,7 @@ mod test_haploid_genomes {
         let second = mc.new_chunk();
         let third = mc.new_chunk();
         let fourth = mc.new_chunk();
+        let fifth = mc.new_chunk();
         let mut mutations = vec![];
         for i in 0..CHUNK_SIZE {
             mc.mutation_ids[first * CHUNK_SIZE + i] = i.try_into().unwrap();
@@ -394,8 +398,14 @@ mod test_haploid_genomes {
             mutations.push(Mutation::new(pos.try_into().unwrap(), vec![], 0.into()));
             mc.mutation_ids[third * CHUNK_SIZE + i] = (mutations.len() - 1).try_into().unwrap();
         }
+        for i in 0..CHUNK_SIZE {
+            let pos = i64::try_from(2 * CHUNK_SIZE + i).unwrap();
+            mutations.push(Mutation::new(pos.try_into().unwrap(), vec![], 0.into()));
+            mc.mutation_ids[fifth * CHUNK_SIZE + i] = (mutations.len() - 1).try_into().unwrap();
+        }
         mc.occupancy[first] = CHUNK_SIZE as i32;
         mc.occupancy[third] = CHUNK_SIZE as i32;
+        mc.occupancy[fifth] = CHUNK_SIZE as i32;
 
         assert!(mc.first_position(second, &mutations).is_none());
         assert!(mc.last_position(second, &mutations).is_none());
@@ -417,6 +427,14 @@ mod test_haploid_genomes {
             mc.last_position(third, &mutations),
             Some(forrustts::Position::try_from((2 * CHUNK_SIZE as i64) - 1).unwrap())
         );
+        assert_eq!(
+            mc.first_position(fifth, &mutations),
+            Some(forrustts::Position::try_from(2 * CHUNK_SIZE as i64).unwrap())
+        );
+        assert_eq!(
+            mc.last_position(fifth, &mutations),
+            Some(forrustts::Position::try_from((3 * CHUNK_SIZE as i64) - 1).unwrap())
+        );
 
         // Okay, so now we can set up some haploid genomes
         let mut haploid_genomes = HaploidGenomes::default();
@@ -424,15 +442,17 @@ mod test_haploid_genomes {
         haploid_genomes.mutation_chunk_ids.push(second as u32);
         haploid_genomes.mutation_chunk_ids.push(third as u32);
         haploid_genomes.mutation_chunk_ids.push(fourth as u32);
+        haploid_genomes.mutation_chunk_ids.push(fifth as u32);
         haploid_genomes.starts.push(0);
-        haploid_genomes.stops.push(4);
+        haploid_genomes.stops.push(5);
 
         haploid_genomes.move_empty_chunks(&mc);
-        assert_eq!(haploid_genomes.stops[0], 2);
+        assert_eq!(haploid_genomes.stops[0], 3);
 
         let genome = &haploid_genomes.mutation_chunk_ids
             [haploid_genomes.starts[0]..haploid_genomes.stops[0]];
-        assert_eq!(genome.len(), 2);
+        assert_eq!(genome, &[0, 2, 4]);
+        assert_eq!(genome.len(), 3);
         let test_position = forrustts::Position::try_from(100).unwrap();
         let p = genome.partition_point(|&c| {
             let comp = mc.last_position(c as usize, &mutations).unwrap() < test_position;
@@ -449,6 +469,6 @@ mod test_haploid_genomes {
             comp
         });
         assert!(p > 0);
-        assert!(p == 2);
+        assert!(p == 3);
     }
 }

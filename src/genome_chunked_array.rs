@@ -62,6 +62,10 @@ struct MutationChunks {
     counts: Vec<u32>,
     // How many valid mutation ids are in a chunk.
     // The rest must be the sentinel value u32::MAX
+    // NOTE: defining this as "how many" is akin to
+    // the len() of a Vec.  That definition may
+    // make doing things like getting
+    // the last position out of a chunk awkward.
     occupancy: Vec<i32>,
     // indexes where chunks have count of 0.
     // We can use these to "reallocate" new chunks.

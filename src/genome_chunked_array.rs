@@ -145,14 +145,6 @@ impl MutationChunks {
         self.position_details(chunk, |_| {
             mutations[self.mutation_ids[chunk * CHUNK_SIZE] as usize].position()
         })
-        //let o = self.occupancy(chunk);
-        //match o {
-        //    x if x == 0 => None,
-        //    x if x > 0 && ((x as usize) <= CHUNK_SIZE) => {
-        //        Some(mutations[self.mutation_ids[chunk * CHUNK_SIZE] as usize].position())
-        //    }
-        //    _ => panic!("invalid occupancy value"),
-        //}
     }
 
     // In general, we don't want to mess w/empty chunks,
@@ -163,15 +155,6 @@ impl MutationChunks {
         self.position_details(chunk, |x| {
             mutations[self.mutation_ids[chunk * CHUNK_SIZE + (x - 1)] as usize].position()
         })
-        //let o = self.occupancy(chunk);
-        //match o {
-        //    x if x == 0 => None,
-        //    x if x > 0 && ((x as usize) <= CHUNK_SIZE) => Some(
-        //        mutations[self.mutation_ids[chunk * CHUNK_SIZE + (x - 1) as usize] as usize]
-        //            .position(),
-        //    ),
-        //    _ => panic!("invalid occupancy value"),
-        //}
     }
 }
 

@@ -140,7 +140,6 @@ impl MutationChunks {
     // In general, we don't want to mess w/empty chunks,
     // other than when we FIRST create one.
     // so we may revisit some of this logic later
-    // FIXME: code duplication w/last_position
     fn first_position(&self, chunk: usize, mutations: &[Mutation]) -> Option<forrustts::Position> {
         self.position_details(chunk, |_| {
             mutations[self.mutation_ids[chunk * CHUNK_SIZE] as usize].position()
@@ -150,7 +149,6 @@ impl MutationChunks {
     // In general, we don't want to mess w/empty chunks,
     // other than when we FIRST create one.
     // so we may revisit some of this logic later
-    // FIXME: code duplication w/first_position
     fn last_position(&self, chunk: usize, mutations: &[Mutation]) -> Option<forrustts::Position> {
         self.position_details(chunk, |x| {
             mutations[self.mutation_ids[chunk * CHUNK_SIZE + (x - 1)] as usize].position()

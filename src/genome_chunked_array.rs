@@ -125,27 +125,58 @@ impl MutationChunks {
         self.occupancy[destination] += self.occupancy[source];
     }
 
-    fn first_position(&self, chunk: usize, mutations: &[Mutation]) -> Option<forrustts::Position> {
+    fn position_details<F>(
+        &self,
+        chunk: usize,
+        mutations: &[Mutation],
+        f: F,
+    ) -> Option<forrustts::Position>
+    where
+        F: Fn(usize, usize, &[Mutation]) -> forrustts::Position,
+    {
         let o = self.occupancy(chunk);
         match o {
             x if x == 0 => None,
-            x if x > 0 && ((x as usize) <= CHUNK_SIZE) => {
-                Some(mutations[self.mutation_ids[chunk * CHUNK_SIZE] as usize].position())
-            }
+            x if x > 0 && ((x as usize) <= CHUNK_SIZE) => Some(f(chunk, x as usize, mutations)),
             _ => panic!("invalid occupancy value"),
         }
     }
 
+    // In general, we don't want to mess w/empty chunks,
+    // other than when we FIRST create one.
+    // so we may revisit some of this logic later
+    // FIXME: code duplication w/last_position
+    fn first_position(&self, chunk: usize, mutations: &[Mutation]) -> Option<forrustts::Position> {
+        self.position_details(chunk, mutations, |c, _, m| {
+            m[self.mutation_ids[c * CHUNK_SIZE] as usize].position()
+        })
+        //let o = self.occupancy(chunk);
+        //match o {
+        //    x if x == 0 => None,
+        //    x if x > 0 && ((x as usize) <= CHUNK_SIZE) => {
+        //        Some(mutations[self.mutation_ids[chunk * CHUNK_SIZE] as usize].position())
+        //    }
+        //    _ => panic!("invalid occupancy value"),
+        //}
+    }
+
+    // In general, we don't want to mess w/empty chunks,
+    // other than when we FIRST create one.
+    // so we may revisit some of this logic later
+    // FIXME: code duplication w/first_position
     fn last_position(&self, chunk: usize, mutations: &[Mutation]) -> Option<forrustts::Position> {
-        let o = self.occupancy(chunk);
-        match o {
-            x if x == 0 => None,
-            x if x > 0 && ((x as usize) <= CHUNK_SIZE) => Some(
-                mutations[self.mutation_ids[chunk * CHUNK_SIZE + (x - 1) as usize] as usize]
-                    .position(),
-            ),
-            _ => panic!("invalid occupancy value"),
-        }
+        self.position_details(chunk, mutations, |c, x, m| {
+            m[self.mutation_ids[c * CHUNK_SIZE + (x - 1)] as usize].position()
+        })
+        //let o = self.occupancy(chunk);
+        //match o {
+        //    x if x == 0 => None,
+        //    x if x > 0 && ((x as usize) <= CHUNK_SIZE) => Some(
+        //        mutations[self.mutation_ids[chunk * CHUNK_SIZE + (x - 1) as usize] as usize]
+        //            .position(),
+        //    ),
+        //    _ => panic!("invalid occupancy value"),
+        //}
     }
 }
 

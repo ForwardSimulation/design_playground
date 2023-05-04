@@ -109,7 +109,6 @@ impl MutationChunks {
             .collect();
     }
 
-
     // Not clear that we really want this kind of logic.
     // This fn may disappear later.
     fn fill_from(&mut self, source: usize, destination: usize) {
@@ -125,6 +124,29 @@ impl MutationChunks {
         }
         self.occupancy[destination] += self.occupancy[source];
     }
+
+    fn first_position(&self, chunk: usize, mutations: &[Mutation]) -> Option<forrustts::Position> {
+        let o = self.occupancy(chunk);
+        match o {
+            x if x == 0 => None,
+            x if x > 0 && ((x as usize) <= CHUNK_SIZE) => {
+                Some(mutations[self.mutation_ids[chunk * CHUNK_SIZE] as usize].position())
+            }
+            _ => panic!("invalid occupancy value"),
+        }
+    }
+
+    fn last_position(&self, chunk: usize, mutations: &[Mutation]) -> Option<forrustts::Position> {
+        let o = self.occupancy(chunk);
+        match o {
+            x if x == 0 => None,
+            x if x > 0 && ((x as usize) <= CHUNK_SIZE) => Some(
+                mutations[self.mutation_ids[chunk * CHUNK_SIZE + (x - 1) as usize] as usize]
+                    .position(),
+            ),
+            _ => panic!("invalid occupancy value"),
+        }
+    }
 }
 
 #[derive(Default)]
@@ -136,6 +158,7 @@ struct HaploidGenomes {
 
 #[cfg(test)]
 mod test_mutation_chunks {
+    use super::Mutation;
     use super::MutationChunks;
     use super::CHUNK_SIZE;
 
@@ -153,6 +176,8 @@ mod test_mutation_chunks {
         let nc = mc.new_chunk();
         assert_eq!(nc, 0);
         assert!(mc.is_empty(nc));
+        assert!(mc.last_position(nc, &[]).is_none());
+        assert!(mc.first_position(nc, &[]).is_none());
         mc.fill_queue();
         let nc = mc.new_chunk();
         assert_eq!(nc, 0);
@@ -164,6 +189,31 @@ mod test_mutation_chunks {
         mc.fill_queue();
         let nc = mc.new_chunk();
         assert_eq!(nc, 2);
+    }
+
+    #[test]
+    fn test_first_last_pos_full_chunk() {
+        let mut mc = MutationChunks::default();
+        let first = mc.new_chunk();
+
+        // Make up some data
+        let mut mutations = vec![];
+        for i in 0..CHUNK_SIZE {
+            mc.mutation_ids[first * CHUNK_SIZE + i] = i.try_into().unwrap();
+            let pos = i64::try_from(i).unwrap();
+            mutations.push(Mutation::new(pos.try_into().unwrap(), vec![], 0.into()));
+        }
+        mc.occupancy[first] = CHUNK_SIZE as i32;
+        assert!(mc.first_position(first, &mutations).is_some());
+        assert!(mc.last_position(first, &mutations).is_some());
+        assert_eq!(
+            mc.first_position(first, &mutations),
+            Some(forrustts::Position::try_from(0_i64).unwrap())
+        );
+        assert_eq!(
+            mc.last_position(first, &mutations),
+            Some(forrustts::Position::try_from((CHUNK_SIZE as i64) - 1).unwrap())
+        );
     }
 
     #[test]

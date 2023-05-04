@@ -243,3 +243,95 @@ mod test_mutation_chunks {
         assert_eq!(mc.occupancy(second), CHUNK_SIZE as i32);
     }
 }
+
+#[cfg(test)]
+mod test_haploid_genomes {
+    use super::*;
+
+    // I STRONGLY DISLIKE the semantics here.
+    // This will lead to all sorts of edge cases
+    #[test]
+    fn test_search_thru_empty_chunk() {
+        let mut mc = MutationChunks::default();
+        let first = mc.new_chunk();
+        let second = mc.new_chunk();
+        let third = mc.new_chunk();
+        let fourth = mc.new_chunk();
+        let mut mutations = vec![];
+        for i in 0..CHUNK_SIZE {
+            mc.mutation_ids[first * CHUNK_SIZE + i] = i.try_into().unwrap();
+            let pos = i64::try_from(i).unwrap();
+            mutations.push(Mutation::new(pos.try_into().unwrap(), vec![], 0.into()));
+        }
+        for i in 0..CHUNK_SIZE {
+            let pos = i64::try_from(CHUNK_SIZE + i).unwrap();
+            mutations.push(Mutation::new(pos.try_into().unwrap(), vec![], 0.into()));
+            mc.mutation_ids[third * CHUNK_SIZE + i] = (mutations.len() - 1).try_into().unwrap();
+        }
+        mc.occupancy[first] = CHUNK_SIZE as i32;
+        mc.occupancy[third] = CHUNK_SIZE as i32;
+
+        assert!(mc.first_position(second, &mutations).is_none());
+        assert!(mc.last_position(second, &mutations).is_none());
+        assert!(mc.first_position(fourth, &mutations).is_none());
+        assert!(mc.last_position(fourth, &mutations).is_none());
+        assert_eq!(
+            mc.first_position(first, &mutations),
+            Some(forrustts::Position::try_from(0).unwrap())
+        );
+        assert_eq!(
+            mc.last_position(first, &mutations),
+            Some(forrustts::Position::try_from((CHUNK_SIZE as i64) - 1).unwrap())
+        );
+        assert_eq!(
+            mc.first_position(third, &mutations),
+            Some(forrustts::Position::try_from(CHUNK_SIZE as i64).unwrap())
+        );
+        assert_eq!(
+            mc.last_position(third, &mutations),
+            Some(forrustts::Position::try_from((2 * CHUNK_SIZE as i64) - 1).unwrap())
+        );
+
+        // Okay, so now we can set up some haploid genomes
+        let mut haploid_genomes = HaploidGenomes::default();
+        haploid_genomes.mutation_chunk_ids.push(first as u32);
+        haploid_genomes.mutation_chunk_ids.push(second as u32);
+        haploid_genomes.mutation_chunk_ids.push(third as u32);
+        haploid_genomes.mutation_chunk_ids.push(fourth as u32);
+        haploid_genomes.starts.push(0);
+        haploid_genomes.stops.push(4);
+
+        // Okay, now we have a genome with chunks that are full, empty, full.
+        // We envision this happening when, at the end of a generation,
+        // all mutations in chunk 1 (2nd chunk) become fixed. The idea is that
+        // we will mark all elements corresponding to fixed mutations with
+        // our sentinel value.
+
+        // The goal of this test is to be able to correctly use partition_point
+        // for this kind of case.
+        let test_position = forrustts::Position::try_from(100).unwrap();
+        assert!(test_position >= mc.first_position(third, &mutations).unwrap());
+        assert!(test_position < mc.last_position(third, &mutations).unwrap());
+
+        let genome = &haploid_genomes.mutation_chunk_ids
+            [haploid_genomes.starts[0]..haploid_genomes.stops[0]];
+        println!("{genome:?}");
+        let p = genome.partition_point(|&c| {
+            let comp = mc.last_position(c as usize, &mutations).is_none()
+                || mc.last_position(c as usize, &mutations).unwrap() < test_position;
+            println!("{c} {:?}, {comp}", mc.last_position(c as usize, &mutations));
+            comp
+        });
+        assert!(p > 0);
+        assert_eq!(p, 2);
+
+        let test_position = forrustts::Position::try_from(200).unwrap();
+        let p = genome.partition_point(|&c| {
+            let comp = mc.last_position(c as usize, &mutations).is_none()
+                || mc.last_position(c as usize, &mutations).unwrap() < test_position;
+            println!("{c} {:?}, {comp}", mc.last_position(c as usize, &mutations));
+            comp
+        });
+        assert_eq!(p, 4);
+    }
+}

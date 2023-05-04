@@ -125,19 +125,14 @@ impl MutationChunks {
         self.occupancy[destination] += self.occupancy[source];
     }
 
-    fn position_details<F>(
-        &self,
-        chunk: usize,
-        mutations: &[Mutation],
-        f: F,
-    ) -> Option<forrustts::Position>
+    fn position_details<F>(&self, chunk: usize, f: F) -> Option<forrustts::Position>
     where
-        F: Fn(usize, usize, &[Mutation]) -> forrustts::Position,
+        F: Fn(usize) -> forrustts::Position,
     {
         let o = self.occupancy(chunk);
         match o {
             x if x == 0 => None,
-            x if x > 0 && ((x as usize) <= CHUNK_SIZE) => Some(f(chunk, x as usize, mutations)),
+            x if x > 0 && ((x as usize) <= CHUNK_SIZE) => Some(f(x as usize)),
             _ => panic!("invalid occupancy value"),
         }
     }
@@ -147,8 +142,8 @@ impl MutationChunks {
     // so we may revisit some of this logic later
     // FIXME: code duplication w/last_position
     fn first_position(&self, chunk: usize, mutations: &[Mutation]) -> Option<forrustts::Position> {
-        self.position_details(chunk, mutations, |c, _, m| {
-            m[self.mutation_ids[c * CHUNK_SIZE] as usize].position()
+        self.position_details(chunk, |_| {
+            mutations[self.mutation_ids[chunk * CHUNK_SIZE] as usize].position()
         })
         //let o = self.occupancy(chunk);
         //match o {
@@ -165,8 +160,8 @@ impl MutationChunks {
     // so we may revisit some of this logic later
     // FIXME: code duplication w/first_position
     fn last_position(&self, chunk: usize, mutations: &[Mutation]) -> Option<forrustts::Position> {
-        self.position_details(chunk, mutations, |c, x, m| {
-            m[self.mutation_ids[c * CHUNK_SIZE + (x - 1)] as usize].position()
+        self.position_details(chunk, |x| {
+            mutations[self.mutation_ids[chunk * CHUNK_SIZE + (x - 1)] as usize].position()
         })
         //let o = self.occupancy(chunk);
         //match o {

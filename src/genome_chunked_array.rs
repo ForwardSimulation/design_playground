@@ -488,6 +488,13 @@ mod tdd_crossover_semantics {
         let genome1 = &haploid_genomes.mutation_chunk_ids
             [haploid_genomes.starts[genomes.1]..haploid_genomes.stops[genomes.1]];
 
+        // What we are doing wrong here:
+        // 1. We are blindly copying over from
+        //    one genome to another.
+        // 2. What we actaully SHOULD do
+        //    is find if breakpoint exists
+        //    WITHIN the chunks, and merge chunks if so
+        // 3. Then, update the index pointers by 1
         let p = genome0.partition_point(|&chunk| {
             let comp = mutation_chunks
                 .last_position(chunk as usize, &mutations)

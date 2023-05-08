@@ -495,22 +495,43 @@ mod tdd_crossover_semantics {
         //    is find if breakpoint exists
         //    WITHIN the chunks, and merge chunks if so
         // 3. Then, update the index pointers by 1
-        let p = genome0.partition_point(|&chunk| {
+        let p0 = genome0.partition_point(|&chunk| {
             let comp = mutation_chunks
                 .last_position(chunk as usize, &mutations)
                 .unwrap()
                 < breakpoint;
             comp
         });
-        output.extend_from_slice(&genome0[0..p]);
-        let p = genome1.partition_point(|&chunk| {
+
+        let final_pos = if p0 < genome0.len()
+            && breakpoint
+                < mutation_chunks
+                    .last_position(genome0[p0] as usize, mutations)
+                    .unwrap()
+        {
+            let chunk_id = genome0[p0] as usize;
+            match mutation_chunks.mutation_ids[chunk_id * CHUNK_SIZE..(chunk_id + 1) * CHUNK_SIZE]
+                .iter()
+                .position(|&m| mutations[m as usize].position() < breakpoint)
+            {
+                Some(index) => index,
+                None => CHUNK_SIZE,
+            }
+        } else {
+            CHUNK_SIZE
+        };
+
+        todo!("if final_pos < CHUNK_SIZE, then we need a new chunk to work with.");
+
+        output.extend_from_slice(&genome0[0..p0]);
+        let p1 = genome1.partition_point(|&chunk| {
             let comp = mutation_chunks
                 .last_position(chunk as usize, &mutations)
                 .unwrap()
                 < breakpoint;
             comp
         });
-        output.extend_from_slice(&genome1[p..]);
+        output.extend_from_slice(&genome1[p1..]);
     }
 
     #[test]

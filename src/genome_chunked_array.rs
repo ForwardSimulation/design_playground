@@ -479,8 +479,8 @@ mod tdd_crossover_semantics {
         genomes: (usize, usize),
         breakpoint: Position,
         mutations: &[Mutation],
-        mutation_chunks: &MutationChunks,
         haploid_genomes: &HaploidGenomes,
+        mutation_chunks: &mut MutationChunks,
         output: &mut Vec<u32>,
     ) {
         let genome0 = &haploid_genomes.mutation_chunk_ids
@@ -558,8 +558,8 @@ mod tdd_crossover_semantics {
             (0, 1),
             breakpoint,
             &mutations,
-            &mutation_chunks,
             &haploid_genomes,
+            &mut mutation_chunks,
             &mut output,
         );
         println!("{output:?}");
@@ -571,8 +571,8 @@ mod tdd_crossover_semantics {
             (0, 1),
             breakpoint,
             &mutations,
-            &mutation_chunks,
             &haploid_genomes,
+            &mut mutation_chunks,
             &mut output,
         );
         println!("{output:?}");
@@ -584,8 +584,8 @@ mod tdd_crossover_semantics {
             (0, 1),
             breakpoint,
             &mutations,
-            &mutation_chunks,
             &haploid_genomes,
+            &mut mutation_chunks,
             &mut output,
         );
         println!("{output:?}");

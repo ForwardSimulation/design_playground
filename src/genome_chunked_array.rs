@@ -198,9 +198,7 @@ impl HaploidGenomes {
         let ngenomes = self.starts.len();
         for genome in 0..ngenomes {
             let chunks = &mut self.mutation_chunk_ids[self.starts[genome]..self.stops[genome]];
-            println!("{chunks:?}");
             let nremoved = remove_chunk_if_empty(chunks, mutation_chunks);
-            println!("{chunks:?}");
             self.stops[0] = nremoved;
         }
     }
@@ -358,11 +356,9 @@ mod test_haploid_genomes {
 
         let genome = &haploid_genomes.mutation_chunk_ids
             [haploid_genomes.starts[0]..haploid_genomes.stops[0]];
-        println!("{genome:?}");
         let p = genome.partition_point(|&c| {
             let comp = mc.last_position(c as usize, &mutations).is_none()
                 || mc.last_position(c as usize, &mutations).unwrap() < test_position;
-            println!("{c} {:?}, {comp}", mc.last_position(c as usize, &mutations));
             comp
         });
         assert!(p > 0);
@@ -372,7 +368,6 @@ mod test_haploid_genomes {
         let p = genome.partition_point(|&c| {
             let comp = mc.last_position(c as usize, &mutations).is_none()
                 || mc.last_position(c as usize, &mutations).unwrap() < test_position;
-            println!("{c} {:?}, {comp}", mc.last_position(c as usize, &mutations));
             comp
         });
         assert_eq!(p, 4);
@@ -459,7 +454,6 @@ mod test_haploid_genomes {
         let test_position = forrustts::Position::try_from(100).unwrap();
         let p = genome.partition_point(|&c| {
             let comp = mc.last_position(c as usize, &mutations).unwrap() < test_position;
-            println!("{c} {:?}, {comp}", mc.last_position(c as usize, &mutations));
             comp
         });
         assert!(p > 0);
@@ -468,10 +462,126 @@ mod test_haploid_genomes {
         let test_position = forrustts::Position::try_from(200).unwrap();
         let p = genome.partition_point(|&c| {
             let comp = mc.last_position(c as usize, &mutations).unwrap() < test_position;
-            println!("{c} {:?}, {comp}", mc.last_position(c as usize, &mutations));
             comp
         });
         assert!(p > 0);
         assert!(p == 3);
+    }
+}
+
+#[cfg(test)]
+mod tdd_crossover_semantics {
+    use forrustts::Position;
+
+    use super::*;
+
+    fn single_crossover(
+        genomes: (usize, usize),
+        breakpoint: Position,
+        mutations: &[Mutation],
+        mutation_chunks: &MutationChunks,
+        haploid_genomes: &HaploidGenomes,
+        output: &mut Vec<u32>,
+    ) {
+        let genome0 = &haploid_genomes.mutation_chunk_ids
+            [haploid_genomes.starts[genomes.0]..haploid_genomes.stops[genomes.0]];
+        let genome1 = &haploid_genomes.mutation_chunk_ids
+            [haploid_genomes.starts[genomes.1]..haploid_genomes.stops[genomes.1]];
+
+        let p = genome0.partition_point(|&chunk| {
+            let comp = mutation_chunks
+                .last_position(chunk as usize, &mutations)
+                .unwrap()
+                < breakpoint;
+            comp
+        });
+        output.extend_from_slice(&genome0[0..p]);
+        let p = genome1.partition_point(|&chunk| {
+            let comp = mutation_chunks
+                .last_position(chunk as usize, &mutations)
+                .unwrap()
+                < breakpoint;
+            comp
+        });
+        output.extend_from_slice(&genome1[p..]);
+    }
+
+    #[test]
+    fn test_simple_merge() {
+        let mut mutation_chunks = MutationChunks::default();
+        let first = mutation_chunks.new_chunk();
+        let second = mutation_chunks.new_chunk();
+        let third = mutation_chunks.new_chunk();
+        let mut mutations = vec![];
+        for i in 0..CHUNK_SIZE {
+            mutation_chunks.mutation_ids[first * CHUNK_SIZE + i] = i.try_into().unwrap();
+            let pos = i64::try_from(i).unwrap();
+            mutations.push(Mutation::new(pos.try_into().unwrap(), vec![], 0.into()));
+        }
+        for i in 0..CHUNK_SIZE {
+            let pos = i64::try_from(CHUNK_SIZE + i).unwrap();
+            mutations.push(Mutation::new(pos.try_into().unwrap(), vec![], 0.into()));
+            mutation_chunks.mutation_ids[second * CHUNK_SIZE + i] =
+                (mutations.len() - 1).try_into().unwrap();
+        }
+        for i in 0..CHUNK_SIZE {
+            let pos = i64::try_from(2 * CHUNK_SIZE + i).unwrap();
+            mutations.push(Mutation::new(pos.try_into().unwrap(), vec![], 0.into()));
+            mutation_chunks.mutation_ids[third * CHUNK_SIZE + i] =
+                (mutations.len() - 1).try_into().unwrap();
+        }
+        mutation_chunks.occupancy.fill(CHUNK_SIZE as i32);
+        assert_eq!(mutations.len(), 3 * CHUNK_SIZE);
+        let mut haploid_genomes = HaploidGenomes::default();
+
+        // make first genome
+        haploid_genomes.mutation_chunk_ids.push(first as u32);
+        haploid_genomes.mutation_chunk_ids.push(second as u32);
+        haploid_genomes.starts.push(0);
+        haploid_genomes.stops.push(2);
+        // make second genome
+        haploid_genomes.mutation_chunk_ids.push(first as u32);
+        haploid_genomes.mutation_chunk_ids.push(third as u32);
+        haploid_genomes.starts.push(2);
+        haploid_genomes.stops.push(4);
+
+        let breakpoint = Position::try_from(CHUNK_SIZE as i64).unwrap();
+        let mut output = vec![];
+        single_crossover(
+            (0, 1),
+            breakpoint,
+            &mutations,
+            &mutation_chunks,
+            &haploid_genomes,
+            &mut output,
+        );
+        println!("{output:?}");
+        assert_eq!(output, &[0, 2]);
+
+        let breakpoint = Position::try_from(2 * CHUNK_SIZE as i64).unwrap();
+        let mut output = vec![];
+        single_crossover(
+            (0, 1),
+            breakpoint,
+            &mutations,
+            &mutation_chunks,
+            &haploid_genomes,
+            &mut output,
+        );
+        println!("{output:?}");
+        assert_eq!(output, &[0, 1]);
+
+        let breakpoint = Position::try_from(10 + CHUNK_SIZE as i64).unwrap();
+        let mut output = vec![];
+        single_crossover(
+            (0, 1),
+            breakpoint,
+            &mutations,
+            &mutation_chunks,
+            &haploid_genomes,
+            &mut output,
+        );
+        println!("{output:?}");
+        assert_eq!(output, &[0, 3]);
     }
 }

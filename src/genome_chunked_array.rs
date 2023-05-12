@@ -503,6 +503,10 @@ mod tdd_crossover_semantics {
             comp
         });
 
+        println!("{genome0:?}, {p0}, {breakpoint:?}");
+
+        todo!("if the insertion point is >= end of the genome, we are done?");
+
         let final_pos = if p0 < genome0.len()
             && breakpoint
                 < mutation_chunks

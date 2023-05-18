@@ -516,6 +516,7 @@ mod tdd_crossover_semantics {
                     .last_position(genome0[p0] as usize, mutations)
                     .unwrap()
         {
+            println!("chunk = {}", genome0[p0]);
             let chunk_id = genome0[p0] as usize;
             match mutation_chunks.mutation_ids[chunk_id * CHUNK_SIZE..(chunk_id + 1) * CHUNK_SIZE]
                 .iter()
@@ -528,8 +529,11 @@ mod tdd_crossover_semantics {
             CHUNK_SIZE
         };
 
-        todo!("if final_pos < CHUNK_SIZE, then we need a new chunk to work with.");
-
+        if final_pos < CHUNK_SIZE {
+            todo!(
+                "if final_pos < CHUNK_SIZE, then we need a new chunk to work with: {final_pos}, {CHUNK_SIZE}: {breakpoint:?}"
+            );
+        }
         output.extend_from_slice(&genome0[0..p0]);
         let p1 = genome1.partition_point(|&chunk| {
             let comp = mutation_chunks
@@ -606,6 +610,7 @@ mod tdd_crossover_semantics {
         println!("{output:?}");
         assert_eq!(output, &[0, 1]);
 
+        println!("last...");
         let breakpoint = Position::try_from(10 + CHUNK_SIZE as i64).unwrap();
         let mut output = vec![];
         single_crossover(

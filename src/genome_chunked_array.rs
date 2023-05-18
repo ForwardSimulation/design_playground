@@ -530,6 +530,10 @@ mod tdd_crossover_semantics {
         };
 
         if final_pos < CHUNK_SIZE {
+            for i in &mutation_chunks.mutation_ids[p0 * CHUNK_SIZE..(p0 + 1) * CHUNK_SIZE] {
+                println!("{i}");
+            }
+
             todo!(
                 "if final_pos < CHUNK_SIZE, then we need a new chunk to work with: {final_pos}, {CHUNK_SIZE}: {breakpoint:?}"
             );

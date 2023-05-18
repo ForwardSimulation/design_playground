@@ -530,7 +530,7 @@ mod tdd_crossover_semantics {
         };
 
         if final_pos < CHUNK_SIZE {
-            for i in &mutation_chunks.mutation_ids[p0 * CHUNK_SIZE..(p0 + 1) * CHUNK_SIZE] {
+            for i in &mutation_chunks.mutation_ids[(genome0[p0]) as usize * CHUNK_SIZE..((genome0[p0] as usize)+ 1) * CHUNK_SIZE] {
                 println!("{i}");
             }
 

@@ -487,6 +487,8 @@ mod tdd_crossover_semantics {
             [haploid_genomes.starts[genomes.0]..haploid_genomes.stops[genomes.0]];
         let genome1 = &haploid_genomes.mutation_chunk_ids
             [haploid_genomes.starts[genomes.1]..haploid_genomes.stops[genomes.1]];
+        println!("genome0 = {genome0:?}");
+        println!("genome1 = {genome1:?}");
 
         // What we are doing wrong here:
         // 1. We are blindly copying over from
@@ -529,12 +531,19 @@ mod tdd_crossover_semantics {
             CHUNK_SIZE
         };
 
-        if final_pos < CHUNK_SIZE {
+        println!("final_pos = {final_pos}");
             for i in &mutation_chunks.mutation_ids
                 [(genome0[p0]) as usize * CHUNK_SIZE..((genome0[p0] as usize) + 1) * CHUNK_SIZE]
             {
                 println!("{i}");
             }
+
+        if final_pos < CHUNK_SIZE {
+            //for i in &mutation_chunks.mutation_ids
+            //    [(genome0[p0]) as usize * CHUNK_SIZE..((genome0[p0] as usize) + 1) * CHUNK_SIZE]
+            //{
+            //    println!("{i}");
+            //}
 
             todo!(
                 "if final_pos < CHUNK_SIZE, then we need a new chunk to work with: {final_pos}, {CHUNK_SIZE}: {breakpoint:?}"
@@ -606,7 +615,6 @@ mod tdd_crossover_semantics {
             &mut mutation_chunks,
             &mut output,
         );
-        println!("{output:?}");
         assert_eq!(output, &[0, 2]);
     }
 

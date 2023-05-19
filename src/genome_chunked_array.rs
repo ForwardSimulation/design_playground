@@ -642,7 +642,7 @@ mod tdd_crossover_semantics {
         output.extend_from_slice(&genome1[p1..]);
     }
 
-    fn simple_merge_test_setup() -> (MutationChunks, Vec<Mutation>, HaploidGenomes) {
+    fn simple_merge_simple_test_setup() -> (MutationChunks, Vec<Mutation>, HaploidGenomes) {
         let mut mutation_chunks = MutationChunks::default();
         let first = mutation_chunks.new_chunk();
         let second = mutation_chunks.new_chunk();
@@ -685,7 +685,7 @@ mod tdd_crossover_semantics {
 
     #[test]
     fn test_simple_merge_1() {
-        let (mut mutation_chunks, mutations, haploid_genomes) = simple_merge_test_setup();
+        let (mut mutation_chunks, mutations, haploid_genomes) = simple_merge_simple_test_setup();
 
         let breakpoint = Position::try_from(CHUNK_SIZE as i64).unwrap();
         let mut output = vec![];
@@ -702,7 +702,7 @@ mod tdd_crossover_semantics {
 
     #[test]
     fn test_simple_merge_2() {
-        let (mut mutation_chunks, mutations, haploid_genomes) = simple_merge_test_setup();
+        let (mut mutation_chunks, mutations, haploid_genomes) = simple_merge_simple_test_setup();
         let breakpoint = Position::try_from(2 * CHUNK_SIZE as i64).unwrap();
         let mut output = vec![];
         single_crossover(
@@ -719,7 +719,7 @@ mod tdd_crossover_semantics {
 
     #[test]
     fn test_simple_merge_3() {
-        let (mut mutation_chunks, mutations, haploid_genomes) = simple_merge_test_setup();
+        let (mut mutation_chunks, mutations, haploid_genomes) = simple_merge_simple_test_setup();
         println!("last...");
         let breakpoint = Position::try_from(10 + CHUNK_SIZE as i64).unwrap();
         let mut output = vec![];

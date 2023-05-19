@@ -549,32 +549,6 @@ mod tdd_crossover_semantics {
             return;
         }
 
-        //let final_pos = if p0 < genome0.len()
-        //    && breakpoint
-        //        < mutation_chunks
-        //            .last_position(genome0[p0] as usize, mutations)
-        //            .unwrap()
-        //{
-        //    println!("chunk = {}", genome0[p0]);
-        //    let chunk_id = genome0[p0] as usize;
-        //    match mutation_chunks.mutation_ids[chunk_id * CHUNK_SIZE..(chunk_id + 1) * CHUNK_SIZE]
-        //        .iter()
-        //        .position(|&m| mutations[m as usize].position() < breakpoint)
-        //    {
-        //        Some(index) => index,
-        //        None => CHUNK_SIZE,
-        //    }
-        //} else {
-        //    CHUNK_SIZE
-        //};
-
-        //println!("final_pos = {final_pos}");
-        //for i in &mutation_chunks.mutation_ids
-        //    [(genome0[p0]) as usize * CHUNK_SIZE..((genome0[p0] as usize) + 1) * CHUNK_SIZE]
-        //{
-        //    println!("{i}");
-        //}
-
         match get_insertion_type(mutation_chunks, mutations, p0, breakpoint) {
             InsertionType::Before => {}
             InsertionType::Within(i) => {
@@ -620,17 +594,6 @@ mod tdd_crossover_semantics {
             }
         }
 
-        //if final_pos < CHUNK_SIZE {
-        //    //for i in &mutation_chunks.mutation_ids
-        //    //    [(genome0[p0]) as usize * CHUNK_SIZE..((genome0[p0] as usize) + 1) * CHUNK_SIZE]
-        //    //{
-        //    //    println!("{i}");
-        //    //}
-
-        //    todo!(
-        //        "if final_pos < CHUNK_SIZE, then we need a new chunk to work with: {final_pos}, {CHUNK_SIZE}: {breakpoint:?}"
-        //    );
-        //}
         output.extend_from_slice(&genome0[0..p0]);
         let p1 = genome1.partition_point(|&chunk| {
             let comp = mutation_chunks

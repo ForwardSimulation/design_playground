@@ -602,7 +602,10 @@ mod tdd_crossover_semantics {
                         todo!("need to do a bunch of back-filling from a before")
                     }
                     InsertionType::Within(index) => {
-                        todo!("need to do a bunch of back-filling from a within, {index}")
+                        todo!(
+                            "need to do a bunch of back-filling from a within, {index}, {p1}, {}",
+                            genome1.len()
+                        )
                     }
                 }
             }

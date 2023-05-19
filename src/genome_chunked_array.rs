@@ -599,9 +599,11 @@ mod tdd_crossover_semantics {
                 });
                 match get_insertion_type(mutation_chunks, mutations, p1, breakpoint) {
                     InsertionType::Before => {
-                        todo!("need to do a bunch of back-filling")},
+                        todo!("need to do a bunch of back-filling")
+                    }
                     InsertionType::Within(_) => {
-                        todo!("need to do a bunch of back-filling")},
+                        todo!("need to do a bunch of back-filling")
+                    }
                 }
             }
         }

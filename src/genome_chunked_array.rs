@@ -602,10 +602,13 @@ mod tdd_crossover_semantics {
                         todo!("need to do a bunch of back-filling from a before")
                     }
                     InsertionType::Within(index) => {
-                        todo!(
-                            "need to do a bunch of back-filling from a within, {index}, {p1}, {}",
-                            genome1.len()
-                        )
+                        for j in index..CHUNK_SIZE {
+                            mutation_chunks.mutation_ids[new_chunk * CHUNK_SIZE + j] =
+                                mutation_chunks.mutation_ids[p1 * CHUNK_SIZE + j];
+                        }
+                        output.extend_from_slice(&genome0[0..p0]);
+                        output.push(new_chunk as u32);
+                        return;
                     }
                 }
             }

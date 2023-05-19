@@ -608,6 +608,12 @@ mod tdd_crossover_semantics {
                         }
                         output.extend_from_slice(&genome0[0..p0]);
                         output.push(new_chunk as u32);
+                        let new_chunk_slice = &mut mutation_chunks.mutation_ids
+                            [new_chunk * CHUNK_SIZE..(new_chunk + 1) * CHUNK_SIZE];
+                        println!(
+                            "new chunk = {:?}",
+                            mutation_positions(new_chunk_slice, mutations)
+                        );
                         return;
                     }
                 }

@@ -497,10 +497,10 @@ mod tdd_crossover_semantics {
         if mutations[s[0] as usize].position() >= position {
             InsertionType::Before
         } else {
-            let index = match s
-                .iter()
-                .position(|&k| mutations[k as usize].position() < position)
-            {
+            let index = match s.iter().position(|&k| {
+                println!("{:?} {:?}", mutations[k as usize].position(), position);
+                mutations[k as usize].position() >= position
+            }) {
                 Some(index) => index,
                 None => panic!(
                     "position must be within chunk {chunk}, {:?}, {:?}",
@@ -549,37 +549,37 @@ mod tdd_crossover_semantics {
             return;
         }
 
-        let final_pos = if p0 < genome0.len()
-            && breakpoint
-                < mutation_chunks
-                    .last_position(genome0[p0] as usize, mutations)
-                    .unwrap()
-        {
-            println!("chunk = {}", genome0[p0]);
-            let chunk_id = genome0[p0] as usize;
-            match mutation_chunks.mutation_ids[chunk_id * CHUNK_SIZE..(chunk_id + 1) * CHUNK_SIZE]
-                .iter()
-                .position(|&m| mutations[m as usize].position() < breakpoint)
-            {
-                Some(index) => index,
-                None => CHUNK_SIZE,
-            }
-        } else {
-            CHUNK_SIZE
-        };
+        //let final_pos = if p0 < genome0.len()
+        //    && breakpoint
+        //        < mutation_chunks
+        //            .last_position(genome0[p0] as usize, mutations)
+        //            .unwrap()
+        //{
+        //    println!("chunk = {}", genome0[p0]);
+        //    let chunk_id = genome0[p0] as usize;
+        //    match mutation_chunks.mutation_ids[chunk_id * CHUNK_SIZE..(chunk_id + 1) * CHUNK_SIZE]
+        //        .iter()
+        //        .position(|&m| mutations[m as usize].position() < breakpoint)
+        //    {
+        //        Some(index) => index,
+        //        None => CHUNK_SIZE,
+        //    }
+        //} else {
+        //    CHUNK_SIZE
+        //};
 
-        println!("final_pos = {final_pos}");
-        for i in &mutation_chunks.mutation_ids
-            [(genome0[p0]) as usize * CHUNK_SIZE..((genome0[p0] as usize) + 1) * CHUNK_SIZE]
-        {
-            println!("{i}");
-        }
+        //println!("final_pos = {final_pos}");
+        //for i in &mutation_chunks.mutation_ids
+        //    [(genome0[p0]) as usize * CHUNK_SIZE..((genome0[p0] as usize) + 1) * CHUNK_SIZE]
+        //{
+        //    println!("{i}");
+        //}
 
         match get_insertion_type(mutation_chunks, mutations, p0, breakpoint) {
             InsertionType::Before => {}
             InsertionType::Within(i) => {
                 todo!(
-                "if final_pos < CHUNK_SIZE, then we need a new chunk to work with: {final_pos}, {CHUNK_SIZE}: {breakpoint:?}"
+                "if final_pos < CHUNK_SIZE, then we need a new chunk to work with: {i}, {CHUNK_SIZE}: {breakpoint:?}"
             );
             }
         }

@@ -589,6 +589,14 @@ mod tdd_crossover_semantics {
                     "new chunk = {:?}",
                     mutation_positions(new_chunk_slice, mutations)
                 );
+                // now, find where the other genome gets involved
+                let p1 = genome1.partition_point(|&chunk| {
+                    let comp = mutation_chunks
+                        .last_position(chunk as usize, &mutations)
+                        .unwrap()
+                        < breakpoint;
+                    comp
+                });
                 todo!(
                 "if final_pos < CHUNK_SIZE, then we need a new chunk to work with: {i}, {CHUNK_SIZE}: {breakpoint:?}"
             );

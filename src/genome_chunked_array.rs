@@ -583,6 +583,7 @@ mod tdd_crossover_semantics {
                     mutation_chunks.mutation_ids[new_chunk * CHUNK_SIZE + j] =
                         mutation_chunks.mutation_ids[p0 * CHUNK_SIZE + j];
                 }
+                mutation_chunks.occupancy[new_chunk] = i as i32;
                 let new_chunk_slice = &mut mutation_chunks.mutation_ids
                     [new_chunk * CHUNK_SIZE..(new_chunk) * CHUNK_SIZE + i];
                 println!(
@@ -598,10 +599,10 @@ mod tdd_crossover_semantics {
                 });
                 match get_insertion_type(mutation_chunks, mutations, p1, breakpoint) {
                     InsertionType::Before => {
-                        todo!("need to do a bunch of back-filling")
+                        todo!("need to do a bunch of back-filling from a before")
                     }
                     InsertionType::Within(_) => {
-                        todo!("need to do a bunch of back-filling")
+                        todo!("need to do a bunch of back-filling from a within")
                     }
                 }
             }

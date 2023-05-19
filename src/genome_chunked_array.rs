@@ -601,8 +601,8 @@ mod tdd_crossover_semantics {
                     InsertionType::Before => {
                         todo!("need to do a bunch of back-filling from a before")
                     }
-                    InsertionType::Within(_) => {
-                        todo!("need to do a bunch of back-filling from a within")
+                    InsertionType::Within(index) => {
+                        todo!("need to do a bunch of back-filling from a within, {index}")
                     }
                 }
             }

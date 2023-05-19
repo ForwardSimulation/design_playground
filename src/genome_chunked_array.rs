@@ -475,6 +475,43 @@ mod tdd_crossover_semantics {
 
     use super::*;
 
+    fn mutation_positions(s: &[u32], mutations: &[Mutation]) -> Vec<Position> {
+        s.iter()
+            .map(|&k| mutations[k as usize].position())
+            .collect()
+    }
+
+    enum InsertionType {
+        Before,
+        Within(usize),
+    }
+
+    fn get_insertion_type(
+        mutation_chunks: &mut MutationChunks,
+        mutations: &[Mutation],
+        chunk: usize,
+        position: Position,
+    ) -> InsertionType {
+        assert!(mutation_chunks.occupancy(chunk) > 0);
+        let s = &mutation_chunks.mutation_ids[chunk * CHUNK_SIZE..(chunk + 1) * CHUNK_SIZE];
+        if mutations[s[0] as usize].position() >= position {
+            InsertionType::Before
+        } else {
+            let index = match s
+                .iter()
+                .position(|&k| mutations[k as usize].position() < position)
+            {
+                Some(index) => index,
+                None => panic!(
+                    "position must be within chunk {chunk}, {:?}, {:?}",
+                    position,
+                    mutation_positions(s, mutations)
+                ),
+            };
+            InsertionType::Within(index)
+        }
+    }
+
     fn single_crossover(
         genomes: (usize, usize),
         breakpoint: Position,
@@ -493,7 +530,7 @@ mod tdd_crossover_semantics {
         // What we are doing wrong here:
         // 1. We are blindly copying over from
         //    one genome to another.
-        // 2. What we actaully SHOULD do
+        // 2. What we actualy SHOULD do
         //    is find if breakpoint exists
         //    WITHIN the chunks, and merge chunks if so
         // 3. Then, update the index pointers by 1
@@ -532,23 +569,32 @@ mod tdd_crossover_semantics {
         };
 
         println!("final_pos = {final_pos}");
-            for i in &mutation_chunks.mutation_ids
-                [(genome0[p0]) as usize * CHUNK_SIZE..((genome0[p0] as usize) + 1) * CHUNK_SIZE]
-            {
-                println!("{i}");
-            }
+        for i in &mutation_chunks.mutation_ids
+            [(genome0[p0]) as usize * CHUNK_SIZE..((genome0[p0] as usize) + 1) * CHUNK_SIZE]
+        {
+            println!("{i}");
+        }
 
-        if final_pos < CHUNK_SIZE {
-            //for i in &mutation_chunks.mutation_ids
-            //    [(genome0[p0]) as usize * CHUNK_SIZE..((genome0[p0] as usize) + 1) * CHUNK_SIZE]
-            //{
-            //    println!("{i}");
-            //}
-
-            todo!(
+        match get_insertion_type(mutation_chunks, mutations, p0, breakpoint) {
+            InsertionType::Before => {}
+            InsertionType::Within(i) => {
+                todo!(
                 "if final_pos < CHUNK_SIZE, then we need a new chunk to work with: {final_pos}, {CHUNK_SIZE}: {breakpoint:?}"
             );
+            }
         }
+
+        //if final_pos < CHUNK_SIZE {
+        //    //for i in &mutation_chunks.mutation_ids
+        //    //    [(genome0[p0]) as usize * CHUNK_SIZE..((genome0[p0] as usize) + 1) * CHUNK_SIZE]
+        //    //{
+        //    //    println!("{i}");
+        //    //}
+
+        //    todo!(
+        //        "if final_pos < CHUNK_SIZE, then we need a new chunk to work with: {final_pos}, {CHUNK_SIZE}: {breakpoint:?}"
+        //    );
+        //}
         output.extend_from_slice(&genome0[0..p0]);
         let p1 = genome1.partition_point(|&chunk| {
             let comp = mutation_chunks

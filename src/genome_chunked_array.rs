@@ -497,10 +497,10 @@ mod tdd_crossover_semantics {
         if mutations[s[0] as usize].position() >= position {
             InsertionType::Before
         } else {
-            let index = match s.iter().position(|&k| {
-                println!("{:?} {:?}", mutations[k as usize].position(), position);
-                mutations[k as usize].position() >= position
-            }) {
+            let index = match s
+                .iter()
+                .position(|&k| mutations[k as usize].position() >= position)
+            {
                 Some(index) => index,
                 None => panic!(
                     "position must be within chunk {chunk}, {:?}, {:?}",
@@ -720,6 +720,65 @@ mod tdd_crossover_semantics {
     #[test]
     fn test_simple_merge_3() {
         let (mut mutation_chunks, mutations, haploid_genomes) = simple_merge_simple_test_setup();
+        println!("last...");
+        let breakpoint = Position::try_from(10 + CHUNK_SIZE as i64).unwrap();
+        let mut output = vec![];
+        single_crossover(
+            (0, 1),
+            breakpoint,
+            &mutations,
+            &haploid_genomes,
+            &mut mutation_chunks,
+            &mut output,
+        );
+        println!("{output:?}");
+        assert_eq!(output, &[0, 3]);
+    }
+
+    fn simple_merge_harder_test_setup() -> (MutationChunks, Vec<Mutation>, HaploidGenomes) {
+        let mut mutation_chunks = MutationChunks::default();
+        let first = mutation_chunks.new_chunk();
+        let second = mutation_chunks.new_chunk();
+        let third = mutation_chunks.new_chunk();
+        let mut mutations = vec![];
+        for i in 0..CHUNK_SIZE {
+            mutation_chunks.mutation_ids[first * CHUNK_SIZE + i] = i.try_into().unwrap();
+            let pos = i64::try_from(i).unwrap();
+            mutations.push(Mutation::new(pos.try_into().unwrap(), vec![], 0.into()));
+        }
+        for i in 0..CHUNK_SIZE {
+            let pos = i64::try_from(CHUNK_SIZE + i).unwrap();
+            mutations.push(Mutation::new(pos.try_into().unwrap(), vec![], 0.into()));
+            mutation_chunks.mutation_ids[second * CHUNK_SIZE + i] =
+                (mutations.len() - 1).try_into().unwrap();
+        }
+
+        for i in 0..CHUNK_SIZE {
+            let pos = i64::try_from(i + 5).unwrap();
+            mutations.push(Mutation::new(pos.try_into().unwrap(), vec![], 0.into()));
+            mutation_chunks.mutation_ids[third * CHUNK_SIZE + i] =
+                (mutations.len() - 1).try_into().unwrap();
+        }
+
+        mutation_chunks.occupancy.fill(CHUNK_SIZE as i32);
+        assert_eq!(mutations.len(), 3 * CHUNK_SIZE);
+        let mut haploid_genomes = HaploidGenomes::default();
+        haploid_genomes.mutation_chunk_ids.push(first as u32);
+        haploid_genomes.mutation_chunk_ids.push(second as u32);
+        haploid_genomes.starts.push(0);
+        haploid_genomes.stops.push(2);
+        // make second genome
+        haploid_genomes.mutation_chunk_ids.push(first as u32);
+        haploid_genomes.mutation_chunk_ids.push(third as u32);
+        haploid_genomes.starts.push(2);
+        haploid_genomes.stops.push(4);
+
+        (mutation_chunks, mutations, haploid_genomes)
+    }
+
+    #[test]
+    fn test_harder_case() {
+        let (mut mutation_chunks, mutations, haploid_genomes) = simple_merge_harder_test_setup();
         println!("last...");
         let breakpoint = Position::try_from(10 + CHUNK_SIZE as i64).unwrap();
         let mut output = vec![];

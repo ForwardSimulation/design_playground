@@ -597,9 +597,12 @@ mod tdd_crossover_semantics {
                         < breakpoint;
                     comp
                 });
-                todo!(
-                "if final_pos < CHUNK_SIZE, then we need a new chunk to work with: {i}, {CHUNK_SIZE}: {breakpoint:?}"
-            );
+                match get_insertion_type(mutation_chunks, mutations, p1, breakpoint) {
+                    InsertionType::Before => {
+                        todo!("need to do a bunch of back-filling")},
+                    InsertionType::Within(_) => {
+                        todo!("need to do a bunch of back-filling")},
+                }
             }
         }
 

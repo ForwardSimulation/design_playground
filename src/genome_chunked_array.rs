@@ -717,7 +717,7 @@ mod tdd_crossover_semantics {
         }
 
         for i in 0..CHUNK_SIZE {
-            let pos = i64::try_from(i + 5).unwrap();
+            let pos = i64::try_from(CHUNK_SIZE + i + 5).unwrap();
             mutations.push(Mutation::new(pos.try_into().unwrap(), vec![], 0.into()));
             mutation_chunks.mutation_ids[third * CHUNK_SIZE + i] =
                 (mutations.len() - 1).try_into().unwrap();

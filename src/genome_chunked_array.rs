@@ -578,6 +578,16 @@ mod tdd_crossover_semantics {
         match get_insertion_type(mutation_chunks, mutations, p0, breakpoint) {
             InsertionType::Before => {}
             InsertionType::Within(i) => {
+                let new_chunk = mutation_chunks.new_chunk();
+                let mut new_chunk_slice = &mut mutation_chunks.mutation_ids
+                    [new_chunk * CHUNK_SIZE..(new_chunk + 1) * CHUNK_SIZE];
+                for j in 0..i {
+                    new_chunk_slice[j] = mutation_chunks.mutation_ids[p0 * CHUNK_SIZE + j];
+                }
+                println!(
+                    "new chunk = {:?}",
+                    mutation_positions(new_chunk_slice, mutations)
+                );
                 todo!(
                 "if final_pos < CHUNK_SIZE, then we need a new chunk to work with: {i}, {CHUNK_SIZE}: {breakpoint:?}"
             );

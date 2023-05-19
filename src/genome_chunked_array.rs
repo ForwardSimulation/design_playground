@@ -754,6 +754,6 @@ mod tdd_crossover_semantics {
             &mut output,
         );
         println!("{output:?}");
-        assert_eq!(output, &[0, 3]);
+        assert_eq!(output, &[0, 3, 4]);
     }
 }

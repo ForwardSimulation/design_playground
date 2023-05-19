@@ -591,11 +591,10 @@ mod tdd_crossover_semantics {
                 );
                 // now, find where the other genome gets involved
                 let p1 = genome1.partition_point(|&chunk| {
-                    let comp = mutation_chunks
-                        .last_position(chunk as usize, &mutations)
+                    mutation_chunks
+                        .last_position(chunk as usize, mutations)
                         .unwrap()
-                        < breakpoint;
-                    comp
+                        < breakpoint
                 });
                 match get_insertion_type(mutation_chunks, mutations, p1, breakpoint) {
                     InsertionType::Before => {

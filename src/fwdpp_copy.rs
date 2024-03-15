@@ -172,6 +172,69 @@ fn remove_fixations_from_extant_genomes(
     }
 }
 
+fn compact_mutations(pop: &mut DiploidPopulation) {
+    let new_indexes = {
+        let mut temp = vec![];
+        let mut i = 0_u32;
+        temp.resize_with(pop.mutations.len(), || {
+            let j = i;
+            i += 1;
+            j
+        });
+        let twon = 2 * (pop.individuals.len() as u32);
+        let (mut left, _): (Vec<u32>, Vec<u32>) = temp.into_iter().partition(|&index| {
+            let mcount = *unsafe { pop.mutation_counts.get_unchecked(index as usize) };
+            mcount > 0 && mcount < twon
+        });
+        left.sort_unstable_by_key(|&m| {
+            unsafe { pop.mutations.get_unchecked(m as usize) }.position()
+        });
+        left
+    };
+    let reindex = {
+        let mut temp = vec![u32::MAX; pop.mutations.len()];
+        for i in 0..new_indexes.len() {
+            temp[new_indexes[i] as usize] = i as u32;
+        }
+        temp
+    };
+
+    // remap the genomes
+    for g in &mut pop.haplotypes {
+        if g.count > 0 {
+            for m in &mut g.mutations {
+                *m = reindex[*m as usize];
+                // assert!((*m as usize) < new_indexes.len());
+            }
+        }
+    }
+
+    let mut mutations = vec![];
+    std::mem::swap(&mut mutations, &mut pop.mutations);
+    // convert all mutations into options
+    let mut mutations = mutations.into_iter().map(Some).collect::<Vec<_>>();
+    let mut mutation_counts = vec![];
+    for i in new_indexes {
+        mutation_counts.push(pop.mutation_counts[i as usize]);
+        pop.mutations.push(mutations[i as usize].take().unwrap());
+    }
+    std::mem::swap(&mut mutation_counts, &mut pop.mutation_counts);
+    // assert_eq!(pop.mutation_counts.len(), pop.mutations.len());
+    //assert!(pop
+    //    .mutations
+    //    .windows(2)
+    //    .all(|w| w[0].position() <= w[1].position()));
+    //for g in &pop.haplotypes {
+    //    if g.count > 0 {
+    //        assert!(g
+    //            .mutations
+    //            .windows(2)
+    //            .all(|w| pop.mutations[w[0] as usize].position()
+    //                <= pop.mutations[w[1] as usize].position()));
+    //    }
+    //}
+}
+
 #[inline(never)]
 fn update_genomes(
     genomes: (usize, usize),
@@ -352,6 +415,11 @@ pub fn evolve_pop(params: SimParams, genetic_map: GeneticMap) -> Option<DiploidP
                 set_fixation_counts_to_zero(2 * params.num_individuals, &mut pop.mutation_counts);
             }
             queue = pop.mutation_recycling();
+        }
+
+        if generation % 100 == 0 {
+            compact_mutations(&mut pop);
+            queue = vec![];
         }
     }
     Some(pop)

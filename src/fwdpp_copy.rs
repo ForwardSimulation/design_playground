@@ -3,7 +3,6 @@ use rand::prelude::SeedableRng;
 
 use crate::common::generate_mutations;
 use crate::common::generate_offspring_genome;
-use crate::common::set_fixation_counts_to_zero;
 use crate::common::DiploidGenome;
 use crate::common::Mutation;
 use crate::common::ParentalGenome;
@@ -49,12 +48,18 @@ impl DiploidPopulation {
         }
     }
 
-    #[inline(never)]
-    fn mutation_recycling(&self) -> Vec<usize> {
+    // NOTE: the Fn generic is for API flexibility
+    // It is not always the case that we want to remove fixations:
+    // * fixations affect phenotype (unlike popgen models of multiplicative fitness)
+    // * multiple hits can make mutations "un-fixed" at a site
+    fn mutation_recycling<F>(&self, f: F) -> Vec<usize>
+    where
+        F: Fn((usize, &u32)) -> Option<usize>,
+    {
         self.mutation_counts
             .iter()
             .enumerate()
-            .filter_map(|(index, value)| if value == &0 { Some(index) } else { None })
+            .filter_map(f)
             .collect::<Vec<usize>>()
     }
 
@@ -63,7 +68,7 @@ impl DiploidPopulation {
         self.mutation_counts.fill(0);
         self.mutation_counts.resize(self.mutations.len(), 0);
         self.haplotypes
-            .iter_mut()
+            .iter()
             .filter(|g| g.count > 0)
             .for_each(|g| {
                 g.mutations.iter().for_each(|m| {
@@ -115,13 +120,15 @@ impl DiploidPopulation {
     }
 }
 
+// NOTE: bad name as we are also resetting all counts to zero
 #[inline(never)]
-fn make_haploid_genome_queue(genomes: &[HaploidGenome]) -> Vec<usize> {
+fn make_haploid_genome_queue(genomes: &mut [HaploidGenome]) -> Vec<usize> {
     let mut rv = vec![];
-    genomes.iter().enumerate().for_each(|(i, g)| {
+    genomes.iter_mut().enumerate().for_each(|(i, g)| {
         if g.count == 0 {
             rv.push(i);
         }
+        g.count = 0;
     });
     rv
 }
@@ -154,6 +161,20 @@ enum NewGenomeType {
     New(HaploidGenome),
 }
 
+fn erase(mutation_counts: &[u32], twon: u32, mutations: &mut [u32]) -> usize {
+    let mut rv = 0;
+
+    // We only call this if we KNOW that the first mutation is a fixation,
+    // so we can start to index from 1.
+    for i in 1..mutations.len() {
+        if *unsafe { mutation_counts.get_unchecked(mutations[i] as usize) } != twon {
+            *unsafe { mutations.get_unchecked_mut(rv) } = mutations[i];
+            rv += 1;
+        }
+    }
+    rv
+}
+
 #[inline(never)]
 fn remove_fixations_from_extant_genomes(
     twon: u32,
@@ -161,11 +182,39 @@ fn remove_fixations_from_extant_genomes(
     genomes: &mut [HaploidGenome],
 ) -> bool {
     if mutation_counts.iter().any(|c| *c == twon) {
-        genomes.iter_mut().filter(|g| g.count > 0).for_each(|g| {
-            // SAFETY: see comments in genome_array.rs
-            g.mutations
-                .retain(|k| *unsafe { mutation_counts.get_unchecked(*k as usize) } < twon)
-        });
+        if let Some(first_extant) = genomes.iter().position(|g| g.count > 0) {
+            let first_fixation = {
+                let index = genomes[first_extant]
+                    .mutations
+                    .iter()
+                    .position(|&k| mutation_counts[k as usize] == twon)
+                    .unwrap();
+                genomes[first_extant].mutations[index]
+            };
+            genomes
+                .iter_mut()
+                .skip(first_extant)
+                .filter(|g| g.count > 0)
+                .for_each(|g| {
+                    let start = g
+                        .mutations
+                        .iter()
+                        .position(|&m| m == first_fixation)
+                        .unwrap();
+                    let tpoint = erase(mutation_counts, twon, &mut g.mutations[start..]);
+                    g.mutations.truncate(start + tpoint);
+                    // SAFETY: see comments in genome_array.rs
+                    //g.mutations
+                    //    .retain(|k| *unsafe { mutation_counts.get_unchecked(*k as usize) } < twon)
+                });
+        } else {
+            panic!("no extant genomes?")
+        }
+        //genomes.iter_mut().filter(|g| g.count > 0).for_each(|g| {
+        //    // SAFETY: see comments in genome_array.rs
+        //    g.mutations
+        //        .retain(|k| *unsafe { mutation_counts.get_unchecked(*k as usize) } < twon)
+        //});
         true
     } else {
         false
@@ -326,10 +375,7 @@ pub fn evolve_pop(params: SimParams, genetic_map: GeneticMap) -> Option<DiploidP
     let mut temporary_mutations = vec![];
     let mut queue: Vec<usize> = vec![];
     for generation in 0..params.num_generations {
-        let mut genome_queue = make_haploid_genome_queue(&pop.haplotypes);
-        for g in &mut pop.haplotypes {
-            g.count = 0;
-        }
+        let mut genome_queue = make_haploid_genome_queue(&mut pop.haplotypes);
         for _ in 0..params.num_individuals {
             // Pick two parents
             let parent1 = rng.sample(parent_picker);
@@ -407,14 +453,19 @@ pub fn evolve_pop(params: SimParams, genetic_map: GeneticMap) -> Option<DiploidP
         // we may work out later.
         if generation % params.gcinterval == 0 {
             pop.count_mutations();
-            if remove_fixations_from_extant_genomes(
+            remove_fixations_from_extant_genomes(
                 2 * params.num_individuals,
                 &pop.mutation_counts,
                 &mut pop.haplotypes,
-            ) {
-                set_fixation_counts_to_zero(2 * params.num_individuals, &mut pop.mutation_counts);
-            }
-            queue = pop.mutation_recycling();
+            );
+
+            queue = pop.mutation_recycling(|(index, &value)| {
+                if value == 0 || value == 2 * params.num_individuals {
+                    Some(index)
+                } else {
+                    None
+                }
+            });
         }
 
         if generation % 100 == 0 {

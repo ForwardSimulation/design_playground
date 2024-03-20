@@ -360,6 +360,7 @@ fn generate_offspring_details(
     pop: &mut DiploidPopulation,
     offspring_genomes: &mut HaploidGenomes,
 ) -> usize {
+    todo!("implementing this nicely is all but impossible? the borrow checker hates what we are doing");
     let mutations = generate_mutations(
         generation,
         distributions.num_mutations,

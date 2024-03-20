@@ -465,7 +465,15 @@ pub fn evolve_pop(params: SimParams, genetic_map: GeneticMap) -> Option<DiploidP
             );
             offspring.push(offspring_genome);
         }
-        std::mem::swap(&mut pop.genomes, &mut offspring_genomes);
+        
+        // HACK to let us check performance
+        pop.genomes.clear();
+        pop.genomes
+            .mutations
+            .extend_from_slice(&offspring_genomes.mutations);
+        pop.genomes
+            .genome_spans
+            .extend_from_slice(&offspring_genomes.genome_spans);
         offspring_genomes.clear();
 
         std::mem::swap(&mut pop.individuals, &mut offspring);

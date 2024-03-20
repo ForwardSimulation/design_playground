@@ -71,6 +71,13 @@ pub struct ParentalGenome<'a> {
     pub genome: usize,
 }
 
+#[derive(Debug)]
+pub struct ParentalGenomeMut<'a> {
+    pub mutations: &'a mut [u32],
+    pub current_mutation_index: usize,
+    pub genome: usize,
+}
+
 // NOTE: we use usize::MAX to indicate a
 // "no genome" state. Production
 // code would do better.

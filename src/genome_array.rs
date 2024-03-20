@@ -23,6 +23,9 @@
 // 6. But we have an issue tracking the genome indexes, right?
 //    No, we can use newtypes to label a genome index
 //    as coming from new vs old.
+// 6b. Alternately, we can avoid newtypes on the genome indexes
+//     and simply maintain a column of internal individual metadata
+//     that means "new" or "old".
 
 use rand::prelude::Rng;
 use rand::SeedableRng;

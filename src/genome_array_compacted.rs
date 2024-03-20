@@ -1,32 +1,5 @@
 //! Prototype streamlined storage of haploid genomes
 
-// Design note:
-// At first glance, it seems that this strategy is a
-// disaster for overlapping generations.
-// The reason is that our current method is:
-// 1. allocate new genomes to a new HaploidGenomes instance.
-// 2. Swap the current and new instances.
-//
-// This would imply that in order to maintain these structures
-// that we would have to lift over the data for "still alive"
-// genomes at each time point.
-//
-// But we can do better:
-//
-// 1. We can call our two instances of HaploidGenomes "old" and "new".
-// 2. Initialize old with the number of alive individuals and track
-//    that number.
-// 3. Each death decrements that number.
-// 4. Births are added to "new" as usual.
-// 5. When the number of alive individuals reaches 0,
-//    we can swap old with new and start over.
-// 6. But we have an issue tracking the genome indexes, right?
-//    No, we can use newtypes to label a genome index
-//    as coming from new vs old.
-// 6b. Alternately, we can avoid newtypes on the genome indexes
-//     and simply maintain a column of internal individual metadata
-//     that means "new" or "old".
-
 use rand::prelude::Rng;
 use rand::SeedableRng;
 

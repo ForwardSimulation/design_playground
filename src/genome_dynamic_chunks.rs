@@ -13,6 +13,7 @@ struct Genome {
 }
 
 pub struct DiploidPopulation {
+    chunk_length: usize,
     chunks: Vec<Chunk>,
     mutations: Vec<Mutation>,
     mutation_counts: Vec<u32>,
@@ -21,7 +22,7 @@ pub struct DiploidPopulation {
 }
 
 impl DiploidPopulation {
-    pub fn new(size: usize) -> Self {
+    pub fn new(size: usize, chunk_length: usize) -> Self {
         let genomes = vec![Genome::default(); 2 * size];
         let individuals = vec![
             DiploidGenome {
@@ -32,6 +33,7 @@ impl DiploidPopulation {
         ];
 
         Self {
+            chunk_length,
             genomes,
             individuals,
             mutations: vec![],

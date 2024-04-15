@@ -1,3 +1,7 @@
+use forrustts::genetics::GenerateBreakpoints;
+use forrustts::genetics::GeneticMap;
+use forrustts::prelude::*;
+
 use crate::common::DiploidGenome;
 use crate::common::Mutation;
 
@@ -41,4 +45,24 @@ impl DiploidPopulation {
             chunks: vec![],
         }
     }
+}
+
+fn crossover(
+    genome1: usize,
+    genome2: usize,
+    mutations: &Vec<Mutation>,
+    crossover_position: Vec<Position>,
+    new_mutations: Vec<usize>,
+    genomes: &mut Vec<Genome>,
+    chunks: &mut Vec<Chunk>,
+) -> Genome {
+    let mut current_genome = genome1;
+    let mut current_genome_index = 0_usize;
+    let mut current_genome_index_position = 0_usize;
+
+    let mut new_chunks = Vec::<usize>::default();
+
+    todo!("not done");
+
+    Genome { chunks: new_chunks }
 }

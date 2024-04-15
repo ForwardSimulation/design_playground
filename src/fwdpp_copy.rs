@@ -356,15 +356,17 @@ fn update_genomes(
 #[inline(never)]
 pub fn evolve_pop(params: SimParams, genetic_map: GeneticMap) -> Option<DiploidPopulation> {
     let params = params.validate()?;
+    let genome_length = params.genome_length.unwrap();
     let mut pop = DiploidPopulation::new(params.num_individuals as usize);
 
     let mut rng = rand::rngs::StdRng::seed_from_u64(params.seed);
     let parent_picker =
         rand::distributions::Uniform::<usize>::new(0, params.num_individuals as usize);
-    let num_mutations = rand_distr::Poisson::<f64>::new(params.mutation_rate).ok()?;
+    let num_mutations =
+        rand_distr::Poisson::<f64>::new(params.mutation_rate * (genome_length as f64)).ok()?;
     let position_generator = rand::distributions::Uniform::<Position>::new(
         Position::new_valid(0),
-        Position::new_valid(1000000),
+        Position::new_valid(genome_length),
     );
     let u01 = rand::distributions::Uniform::new(0., 1.);
 

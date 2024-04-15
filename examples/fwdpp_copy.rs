@@ -8,7 +8,12 @@ use design_playground::SimParams;
 
 fn main() {
     let params = SimParams::parse();
-    let poisson = vec![PoissonCrossover::new(0, 1000000, params.recrate).unwrap()];
+    let genome_length = params.genome_length.unwrap();
+    let poisson =
+        vec![
+            PoissonCrossover::new(0, genome_length, params.recrate * (genome_length as f64))
+                .unwrap(),
+        ];
     let builder = GeneticMapBuilder::default().extend_poisson(&poisson);
     let genetic_map = GeneticMap::new_from_builder(builder).unwrap();
     let pop = evolve_pop(params, genetic_map).unwrap();

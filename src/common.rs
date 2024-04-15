@@ -18,6 +18,8 @@ pub struct SimParams {
     pub recrate: f64,
     #[arg(short, long = "gc", default_value = "1")]
     pub gcinterval: u32,
+    #[arg(short, long, default_value = None)]
+    pub genome_length: Option<i64>,
 }
 
 impl SimParams {
@@ -25,6 +27,7 @@ impl SimParams {
         if !self.mutation_rate.is_finite() || self.mutation_rate < 0.0 {
             return None;
         }
+        self.genome_length?;
         Some(self)
     }
 }
